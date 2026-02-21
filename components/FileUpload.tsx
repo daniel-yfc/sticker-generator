@@ -7,14 +7,36 @@ interface FileUploadProps {
   onEditClick?: () => void;
   disabled: boolean;
   t: (key: string) => any;
+  mode?: 'hero' | 'compact';
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, currentPreview, onEditClick, disabled, t }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, currentPreview, onEditClick, disabled, t, mode = 'hero' }) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       onFileSelect(event.target.files[0]);
     }
   };
+
+  if (mode === 'compact') {
+    return (
+      <div className="w-full">
+         <label className={`
+            flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border-2 border-dashed transition-all cursor-pointer
+            ${disabled ? 'bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed' : 'bg-white border-gray-300 hover:border-indigo-500 hover:bg-indigo-50/10 text-gray-600 hover:text-indigo-600'}
+         `}>
+            <UploadCloud className="w-5 h-5" />
+            <span className="text-sm font-bold">{t('step2_change')}</span>
+            <input
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              onChange={handleFileChange}
+              disabled={disabled}
+              className="hidden"
+            />
+         </label>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

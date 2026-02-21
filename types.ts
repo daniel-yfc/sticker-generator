@@ -1,16 +1,28 @@
+
+export interface StyleModifiers {
+  person: string;
+  object: string;
+  landscape: string;
+}
+
 export interface StyleOption {
   id: number;
-  prompt: string;
+  style: string;
+  basePrompt: string;
+  modifiers: StyleModifiers;
   previewColor: string;
+  iconName: string;
 }
 
 export enum AppStatus {
   IDLE = 'idle',
-  EDITING = 'editing', // New status for image manipulation
-  READY = 'ready',     // Image is cropped and ready for generation
+  EDITING = 'editing',
+  READY = 'ready',
   UPLOADING = 'uploading',
   PROCESSING = 'processing',
+  SET_PROCESSING = 'set_processing', // New: Processing a batch set
   SUCCESS = 'success',
+  SET_SUCCESS = 'set_success',       // New: Displaying a batch set
   ERROR = 'error',
 }
 
@@ -35,5 +47,10 @@ export interface StickerRecord {
   imageUrl: string;
   styleId: number;
   timestamp: number;
-  sourceImageId?: string; // To link back to a specific source if needed
+  sourceImageId?: string;
+}
+
+export interface StickerSet {
+  sourceId: string;
+  stickers: StickerRecord[];
 }

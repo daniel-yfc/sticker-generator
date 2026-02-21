@@ -1,65 +1,150 @@
+
 import { StyleOption, GalleryItem, Language } from './types';
 
 export const STYLES: StyleOption[] = [
   {
     id: 1,
-    prompt: "Modern vector art portrait, thick clean outlines, smooth cel-shaded gradients, vibrant colors, clear facial features",
-    previewColor: "bg-blue-500"
+    style: "Flat Vector Art",
+    basePrompt: "Professional Flat Vector Art. Crisp geometric shapes, Adobe Illustrator precision, clean bold outlines, vibrant solid color blocks, minimal cel-shading, high-end commercial graphic design.",
+    modifiers: {
+      person: "Stylized human anatomy, trendy minimalist outfit, simplified facial features, expressive flat character design, fashion illustration aesthetic.",
+      object: "Isometric view, clean silhouettes, icon-like simplification, matte finish, studio lighting for products, commercial catalog style.",
+      landscape: "Layered flat horizons, geometric clouds and trees, 2D depth perception, clean parallax layers, vibrant environmental vector."
+    },
+    previewColor: "bg-blue-500",
+    iconName: "PenTool"
   },
   {
     id: 2,
-    prompt: "Analog marker style portrait, expressive ink lines, visible marker stroke textures, organic sketchbook feel",
-    previewColor: "bg-orange-500"
+    style: "Marker Illustration",
+    basePrompt: "Professional Copic Marker Illustration. Saturated alcohol ink texture, heavy ink outlines, expressive hand-drawn strokes, sketchbook aesthetic, organic ink bleeding effects.",
+    modifiers: {
+      person: "Fashion sketch style, dynamic pose, emphasized shadow placement with marker layering, hand-drawn character charm.",
+      object: "Product design sketch, reflective highlights, rough textures, artistic cross-hatching, industrial design aesthetic.",
+      landscape: "Quick outdoor plein-air sketch, bleeding ink horizons, organic foliage clusters, atmospheric marker washes."
+    },
+    previewColor: "bg-orange-500",
+    iconName: "Brush"
   },
   {
     id: 3,
-    prompt: "Ligne Claire style portrait, vector lines, uniform thickness, flat solid colors, no gradients, high-contrast minimalist face",
-    previewColor: "bg-yellow-400"
+    style: "Minimalist Flat Design",
+    basePrompt: "Ultra-Minimalist Ligne Claire. Hergé aesthetic, uniform technical line weight, absolute flat pastel tints, zero gradients, zero shadows, architectural simplification.",
+    modifiers: {
+      person: "Elegant posture, clear-cut contours, minimal clothing folds, serene facial expressions, vintage European comic style.",
+      object: "Clean technical drawing, simplified mechanical parts, uniform line art, clear functional form, blueprint aesthetic.",
+      landscape: "Vast open spaces, clean architectural lines, rhythmic composition, serene and organized environment, minimalist nature."
+    },
+    previewColor: "bg-yellow-400",
+    iconName: "Minimize"
   },
   {
     id: 4,
-    prompt: "Risograph print style portrait, visible halftone dots, limited color palette (e.g., pink, blue, yellow), slight color misalignment",
-    previewColor: "bg-pink-500"
+    style: "Risograph Print",
+    basePrompt: "Authentic Risograph Print. Vibrant soy-based ink overlaps, visible halftone dot patterns, intentional color layer misregistration (CMYK offset), heavy grain texture.",
+    modifiers: {
+      person: "Dotted skin textures, pop-art character framing, retro fashion, stylized portrait with overlapping ink layers.",
+      object: "Industrial object silhouettes, grainy metallic textures, vintage mechanical feel, limited palette product art.",
+      landscape: "Grainy sky gradients, textured mountains, retro travel poster aesthetic, lo-fi environmental printing."
+    },
+    previewColor: "bg-pink-500",
+    iconName: "Printer"
   },
   {
     id: 5,
-    prompt: "Bold 2.5D stylized portrait, fluid outlines, rim lighting, smooth matte texture, charismatic semi-realistic expression",
-    previewColor: "bg-red-500"
+    style: "3D Stylized Render",
+    basePrompt: "High-End 3D Stylized Render. Disney-Pixar movie still, Octane Render, subsurface scattering, matte plastic toy finish, volumetric rim lighting, soft ambient occlusion.",
+    modifiers: {
+      person: "Big expressive eyes, soft skin shaders, high-quality hair grooming, cute character rig, cinematic facial expression.",
+      object: "Tactile material details, studio product lighting, macro photography focus, satisfying rounded edges, toy-like premium finish.",
+      landscape: "Miniature diorama style, tilt-shift effect, stylized environmental assets, magical lighting, toy-world terrain."
+    },
+    previewColor: "bg-red-500",
+    iconName: "Box"
   },
   {
     id: 6,
-    prompt: "Traditional watercolor portrait, loose ink pen outlines, soft water color bleeds and stains, artistic and elegant",
-    previewColor: "bg-teal-400"
+    style: "Watercolor Illustration",
+    basePrompt: "Traditional Watercolor Wash. Professional wet-on-wet technique, organic pigment blooms, artistic granulation, soft paint bleeds, 300gsm cold-press textured paper.",
+    modifiers: {
+      person: "Ethereal portrait, translucent skin tones, fluid clothing drapes, soft facial details, artistic ink-splattered accents.",
+      object: "Organic object forms, soft edges, delicate pigment pooling, artistic representation of still life, dreamy textures.",
+      landscape: "Misty horizons, blurred background mountains, artistic water reflections, atmospheric weather effects, fluid natural beauty."
+    },
+    previewColor: "bg-teal-400",
+    iconName: "Droplet"
   },
   {
     id: 7,
-    prompt: "Tech-industrial vinyl toy bust, matte plastic finish, framed in a spec sheet layout with UI elements, stylized character",
-    previewColor: "bg-slate-600"
+    style: "Cyberpunk Mecha",
+    basePrompt: "Cyberpunk Mecha-Core. Intricate robotic greeble details, glowing neon circuits, carbon fiber and brushed metal surfaces, futuristic HUD overlay, tactical sci-fi aesthetic.",
+    modifiers: {
+      person: "Cyborg enhancements, neural link ports, high-tech armor plating, glowing optical sensors, futuristic streetwear.",
+      object: "Complex mechanical structure, internal circuitry visible, matte industrial coating, heavy-duty hardware, sci-fi gadgetry.",
+      landscape: "Dystopian cityscape, neon-drenched rainy streets, towering megastructures, flying vehicles, high-tech industrial zone."
+    },
+    previewColor: "bg-slate-600",
+    iconName: "Cpu"
   },
   {
     id: 8,
-    prompt: "Graphic novel ink portrait, thick clean outlines, heavy comic book shadows, sharp angular lines, high-contrast, dramatic lighting",
-    previewColor: "bg-indigo-600"
+    style: "American Comic Art",
+    basePrompt: "Modern Age American Comic. Aggressive black ink brushwork, dynamic foreshortening, Ben-Day dots shading, cinematic high-contrast lighting, bold primary palette.",
+    modifiers: {
+      person: "Muscular definition, heroic pose, dramatic facial shadows, action-oriented framing, iconic costume details.",
+      object: "Impactful object lines, speed lines, high-contrast metallic sheen, 'larger than life' weapon or gadget design.",
+      landscape: "Gothic city skylines, dramatic explosions, splash page composition, forced perspective streets, comic book panels."
+    },
+    previewColor: "bg-indigo-600",
+    iconName: "Zap"
   },
   {
     id: 9,
-    prompt: "Colored pencil sketch portrait, expressive hand-drawn lines, visible soft pencil strokes, layered and blended colors, textured paper feel",
-    previewColor: "bg-amber-600"
+    style: "Colored Pencil Sketch",
+    basePrompt: "Detailed Colored Pencil Sketch. Prismacolor texture, dense cross-hatching, burnished wax finish, visible paper tooth, handcrafted warmth.",
+    modifiers: {
+      person: "Gentle portraiture, visible skin texture strokes, soft layered hair, intimate and realistic facial features.",
+      object: "Waxy texture highlights, delicate color transitions, hand-drawn still life, realistic everyday objects with artistic touch.",
+      landscape: "Soft rolling hills, meticulously sketched foliage, warm sunset gradients, textured natural scenery."
+    },
+    previewColor: "bg-amber-600",
+    iconName: "Pencil"
   },
   {
     id: 10,
-    prompt: "1930s vintage animation style, monochrome palette, simple rounded shapes, bouncy and fluid black lines, expressive eyes",
-    previewColor: "bg-gray-800"
+    style: "1930s Animation",
+    basePrompt: "1930s Rubber Hose Animation. Fleischer Studios style, bouncy ink-blot characters, pie-cut eyes, vintage film grain and scratches, monochrome.",
+    modifiers: {
+      person: "Elastic limbs, white gloves, oversized shoes, rhythmic bouncing pose, exaggerated facial expressions.",
+      object: "Anthropomorphic objects, items with faces and dancing limbs, rounded 'squash and stretch' form, vintage 1930s props.",
+      landscape: "Surreal bouncing backgrounds, anthropomorphic trees and clouds, looping animation scenery, vintage theatre backdrop feel."
+    },
+    previewColor: "bg-gray-800",
+    iconName: "Film"
   },
   {
     id: 11,
-    prompt: "Film Noir movie still portrait, high-contrast black and white, dramatic chiaroscuro lighting, heavy shadows, mysterious mood",
-    previewColor: "bg-neutral-900"
+    style: "Noir Graphic Novel",
+    basePrompt: "Noir Graphic Novel. Extreme Chiaroscuro lighting, stark ink silhouettes, heavy dramatic shadows, Sin City aesthetic, gritty urban atmosphere.",
+    modifiers: {
+      person: "Hard-boiled detective look, trench coat and fedora, face partially hidden in shadow, mysterious and stern gaze.",
+      object: "Sharp metallic reflections in dark, dramatic silhouetted props, gritty textures, high-contrast monochrome product focus.",
+      landscape: "Rain-slicked city streets, stark streetlamp lighting, deep alleyway shadows, cinematic urban claustrophobia."
+    },
+    previewColor: "bg-neutral-900",
+    iconName: "Moon"
   },
   {
     id: 12,
-    prompt: "Impressionist oil painting portrait, visible and thick impasto brushstrokes, rich color blending, focus on light and shadow",
-    previewColor: "bg-violet-600"
+    style: "Impasto Oil Painting",
+    basePrompt: "Heavy Impasto Oil Painting. Thick palette knife strokes, rhythmic brush textures, vibrant color dabs, post-impressionist energy, museum-quality canvas relief.",
+    modifiers: {
+      person: "Textured skin tones, visible brushwork defining facial structure, expressive emotional aura, vibrant clothing textures.",
+      object: "Three-dimensional paint volume, heavy texture on still life, rhythmic patterns of light, tactile artistic representation.",
+      landscape: "Swirling skies, rhythmic fields of color, thick tactile mountains, shimmering water surfaces, vibrant natural energy."
+    },
+    previewColor: "bg-violet-600",
+    iconName: "Palette"
   }
 ];
 
@@ -94,6 +179,7 @@ export const TRANSLATIONS = {
       "步驟 3/4: 應用風格與向量化轉換...",
       "步驟 4/4: 最終驗證與裁切...",
     ],
+    processing_set: "正在製作擴展套裝貼圖 (一組 3 張)...",
     result_verified: "驗證通過：512x512px PNG",
     result_title: "您的貼圖已完成！",
     result_style_label: "風格",
@@ -101,29 +187,38 @@ export const TRANSLATIONS = {
     btn_magic_wand: "一鍵去背修復",
     btn_reset: "製作下一張",
     btn_reuse: "用同張圖換風格",
+    btn_generate_set: "製作擴展套裝",
     btn_download: "下載 PNG",
+    btn_retry: "再試一次 (Retry)",
+    set_title: "擴展套裝貼圖已完成！",
+    set_desc: "基於您的原圖，我們生成了風格統一但表情動作不同的貼圖。",
+    error_header: "哎呀！製作過程出了點問題",
     error_upload: "讀取檔案時發生錯誤",
     error_process: "製作失敗，請稍後再試或更換照片。",
-    footer: "© 2024 Sticker Maker Pro. Powered by Google Gemini.",
-    gallery_title: "社群作品藝廊",
-    gallery_subtitle: "探索來自全球的創意貼圖",
-    gallery_btn_try: "試試這個風格",
+    error_safety: "內容觸發了安全過濾機制，請更換圖片再試。",
+    error_timeout: "伺服器反應時間過長，可能是目前負載較大。",
+    error_no_image: "AI 未能生成有效的貼圖圖片。",
+    footer: "© 2026 Sticker Maker Pro. Powered by Google Gemini. All rights reserved.",
+    gallery_title: "精選範例 (Sample Gallery)",
+    gallery_subtitle: "看看大家使用這些風格製作出的精彩貼圖，或是選擇一個範例來試試看！",
+    gallery_btn_try: "套用此風格",
+    gallery_btn_import: "匯入範例圖",
     history_title: "我的貼圖集",
     history_subtitle: "您在本機製作的所有貼圖",
     history_empty: "尚未製作任何貼圖。快去製作第一張吧！",
     styles: {
-      1: { name: "向量賽璐珞風", features: "粗黑輪廓、平滑漸層" },
-      2: { name: "手繪麥克筆風", features: "手繪線條、筆觸感" },
-      3: { name: "極簡平塗風", features: "純色塊、無漸層" },
-      4: { name: "孔版印刷風", features: "網點、錯位疊印" },
-      5: { name: "美式卡通風", features: "粗線條、微立體感" },
-      6: { name: "水彩暈染風", features: "墨水線、水漬感" },
-      7: { name: "科技工業風", features: "啞光、未來感、框線" },
-      8: { name: "圖像小說風", features: "漫畫風格、高對比陰影" },
-      9: { name: "色鉛筆素描風", features: "柔軟筆觸、疊色層次" },
-      10: { name: "復古橡膠管卡通", features: "30年代動畫、黑白線條" },
-      11: { name: "黑白電影偵探風", features: "純黑白、強烈光影" },
-      12: { name: "印象派油畫風", features: "可見筆觸、厚塗顏料" },
+      1: { name: "專業向量平塗風", features: "精準幾何、粗黑輪廓、俐落高對比色塊" },
+      2: { name: "酒精麥克筆手繪", features: "色彩疊染、手繪墨感、生動自然筆觸" },
+      3: { name: "極簡清亮風格", features: "等寬技術線條、純粹粉彩平塗、無影透視" },
+      4: { name: "復古藝術孔版風", features: "孔版網點、層次錯位疊印、粗糙紙張顆粒" },
+      5: { name: "3D 擬真卡通風", features: "皮克斯質感、次表面散射、柔和邊緣光" },
+      6: { name: "傳統水彩暈染風", features: "濕畫暈染、顏料沈澱、夢幻透明層次" },
+      7: { name: "賽博機械核心風", features: "工業啞光、霓虹線條、精密高科技細節" },
+      8: { name: "美式硬派漫畫風", features: "動態透視、點狀網格陰影、高飽和原色" },
+      9: { name: "精細色鉛筆素描", features: "交叉排線、蠟質疊色、溫暖紙張紋理" },
+      10: { name: "30年代橡膠管風", features: "圓潤肢體、老膠卷顆粒、超現實誇張動感" },
+      11: { name: "罪惡之城黑白漫", features: "明暗對照法、深重墨跡剪影、都市硬派風格" },
+      12: { name: "藝術厚塗油畫風", features: "刮刀質感、節奏性筆觸、豐富色彩堆疊" },
     }
   },
   'en': {
@@ -156,6 +251,7 @@ export const TRANSLATIONS = {
       "Step 3/4: Applying style & vectorizing...",
       "Step 4/4: Final validation & cropping...",
     ],
+    processing_set: "Generating expanded sticker set (3 variations)...",
     result_verified: "Verified: 512x512px PNG",
     result_title: "Sticker Ready!",
     result_style_label: "Style",
@@ -163,29 +259,38 @@ export const TRANSLATIONS = {
     btn_magic_wand: "Fix Background",
     btn_reset: "Start New",
     btn_reuse: "Reuse Photo",
+    btn_generate_set: "Generate Set",
     btn_download: "Download PNG",
+    btn_retry: "Retry Generation",
+    set_title: "Sticker Set Ready!",
+    set_desc: "Based on your original, we've created a series with consistent style but different expressions.",
+    error_header: "Oops! Something went wrong",
     error_upload: "Error reading file",
     error_process: "Processing failed, please try again or use a different photo.",
-    footer: "© 2024 Sticker Maker Pro. Powered by Google Gemini.",
-    gallery_title: "Community Gallery",
-    gallery_subtitle: "Explore creative stickers from around the world",
-    gallery_btn_try: "Try this style",
+    error_safety: "Content was blocked by safety filters. Please try another image.",
+    error_timeout: "Server took too long to respond. High load detected.",
+    error_no_image: "AI failed to produce a valid image result.",
+    footer: "© 2026 Sticker Maker Pro. Powered by Google Gemini. All rights reserved.",
+    gallery_title: "Sample Gallery",
+    gallery_subtitle: "See what others are creating or import a sample to start testing!",
+    gallery_btn_try: "Use Style",
+    gallery_btn_import: "Import Sample",
     history_title: "My Collection",
     history_subtitle: "All stickers you created on this device",
     history_empty: "No stickers yet. Go create your first one!",
     styles: {
-      1: { name: "Modern Vector", features: "Thick outlines, smooth gradients" },
-      2: { name: "Analog Marker", features: "Expressive ink lines, marker texture" },
-      3: { name: "Ligne Claire", features: "Flat colors, no gradients, minimalist" },
-      4: { name: "Risograph", features: "Halftone dots, color misalignment" },
-      5: { name: "American Cartoon", features: "Bold 2.5D, fluid outlines" },
-      6: { name: "Watercolor", features: "Soft bleeds, ink outlines" },
-      7: { name: "Tech Industrial", features: "Matte plastic, UI elements" },
-      8: { name: "Graphic Novel", features: "Heavy shadows, high contrast" },
-      9: { name: "Colored Pencil", features: "Soft strokes, layered colors" },
-      10: { name: "Rubber Hose", features: "1930s animation, monochrome" },
-      11: { name: "Film Noir", features: "Black & white, dramatic lighting" },
-      12: { name: "Impressionist", features: "Thick brushstrokes, light & shadow" },
+      1: { name: "Modern Vector", features: "Crisp geometric shapes, bold outlines, vibrant flat blocks" },
+      2: { name: "Analog Marker", features: "Saturated ink layering, organic bleeds, expressive strokes" },
+      3: { name: "Ligne Claire", features: "Uniform line weight, flat pastel tints, zero shadows" },
+      4: { name: "Retro Risograph", features: "Halftone dot patterns, ink misregistration, grain texture" },
+      5: { name: "3D Stylized", features: "Soft plastic texture, volumetric lighting, Pixar-style charm" },
+      6: { name: "Artistic Watercolor", features: "Translucent pigment blooms, paper texture, fluid bleeds" },
+      7: { name: "Tech Industrial", features: "Matte surfaces, futuristic HUD, robotic greeble details" },
+      8: { name: "Dynamic Comic", features: "Bold ink brushwork, Ben-Day dots, cinematic contrast" },
+      9: { name: "Colored Pencil", features: "Visible pencil grain, wax finish, handcrafted cross-hatching" },
+      10: { name: "Rubber Hose", features: "Bouncy 1930s style, elastic limbs, vintage film grain" },
+      11: { name: "Dark Film Noir", features: "Extreme Chiaroscuro shadows, stark monochrome silhouettes" },
+      12: { name: "Impasto Oil", features: "Thick palette knife texture, rhythmic strokes, vibrant color dabs" },
     }
   },
   'ja': {
@@ -218,6 +323,7 @@ export const TRANSLATIONS = {
       "ステップ 3/4: スタイル適用中...",
       "ステップ 4/4: 最終確認中...",
     ],
+    processing_set: "拡張ステッカーセットを生成中 (3種類のバリエーション)...",
     result_verified: "検証済み：512x512px PNG",
     result_title: "ステッカー完成！",
     result_style_label: "スタイル",
@@ -225,40 +331,55 @@ export const TRANSLATIONS = {
     btn_magic_wand: "背景を修正",
     btn_reset: "新規作成",
     btn_reuse: "同じ写真で作成",
+    btn_generate_set: "セットを作成",
     btn_download: "PNGをダウンロード",
+    btn_retry: "もう一度試す",
+    set_title: "ステッカーセット完成！",
+    set_desc: "元の画像を元に、スタイルは同じで表情や動きが異なるシリーズを作成しました。",
+    error_header: "エラーが発生しました",
     error_upload: "ファイルの読み込みエラー",
     error_process: "作成に失敗しました。もう一度試すか、別の写真を使用してください。",
-    footer: "© 2024 Sticker Maker Pro. Powered by Google Gemini.",
-    gallery_title: "コミュニティギャラリー",
-    gallery_subtitle: "世界中のクリエイティブなステッカーを探そう",
-    gallery_btn_try: "このスタイルで作成",
+    error_safety: "安全フィルターによりブロックされました。別の画像を試してください。",
+    error_timeout: "サーバーの応答時間が長すぎます。負荷が高い可能性があります。",
+    error_no_image: "AIが有効な画像を生成できませんでした。",
+    footer: "© 2026 Sticker Maker Pro. Powered by Google Gemini. All rights reserved.",
+    gallery_title: "サンプルギャラリー",
+    gallery_subtitle: "他のユーザーが作成した作品を見たり、サンプルをインポートして試してみましょう！",
+    gallery_btn_try: "スタイルを使用",
+    gallery_btn_import: "サンプルをインポート",
     history_title: "マイコレクション",
     history_subtitle: "このデバイスで作成したすべてのステッカー",
     history_empty: "まだステッカーがありません。最初の1枚を作成しましょう！",
     styles: {
-      1: { name: "ベクターセルロイド風", features: "太い輪郭、滑らかなグラデーション" },
-      2: { name: "手描きマーカー風", features: "インクの線、マーカーの質感" },
-      3: { name: "ミニマルベタ塗り風", features: "単色、グラデーションなし" },
-      4: { name: "リソグラフ印刷風", features: "網点、版ズレ効果" },
-      5: { name: "アメリカンカートゥーン", features: "太い線、2.5D的な立体感" },
-      6: { name: "水彩画風", features: "インクの輪郭、水彩の滲み" },
-      7: { name: "テック工業風", features: "マットな質感、UI要素" },
-      8: { name: "グラフィックノベル風", features: "コミック調、強いコントラスト" },
-      9: { name: "色鉛筆スケッチ風", features: "柔らかい筆致、重ね塗り" },
-      10: { name: "レトロラバーホース", features: "1930年代アニメ、モノクロ" },
-      11: { name: "フィルム・ノワール風", features: "白黒、ドラマチックな照明" },
-      12: { name: "印象派油絵風", features: "厚塗り、光と影の表現" },
+      1: { name: "モダン・ベクター平塗風", features: "精緻な幾何学形状、太い輪郭線、鮮やかな配色" },
+      2: { name: "アナログ・マーカー手描き風", features: "アルコールインクの重ね塗り、自然な滲み、躍動感のある筆致" },
+      3: { name: "リーニュ・クレール (Ligne Claire)", features: "等幅のテクニカルライン、パステル調の平塗り、陰影なし" },
+      4: { name: "レトロ・リソグラフ風", features: "ハーフトーンの網点、意図的な版ズレ、ざらついた紙の質感" },
+      5: { name: "3Dスタイライズド風", features: "マットな質感、柔らかな辺縁光、ピクサー風のキャラクター性" },
+      6: { name: "芸術的水彩暈し風", features: "顔料の自然な沈殿、透明感のある重ね塗り、幻想的な滲み" },
+      7: { name: "サイバー・メカニカルコア", features: "工業的なマット質感、ネオン回路、精密なメカ細節" },
+      8: { name: "ダイナミック・コミック風", features: "大胆なインクの筆致、ベンデイドット、ドラマチックな構図" },
+      9: { name: "精緻な色鉛筆スケッチ", features: "鉛筆の粒子感、クロスハッチング、温かみのある質感" },
+      10: { name: "30年代ラバーホース", features: "弾むような肢体、ビンテージフィルムの粒子、超現実的な動き" },
+      11: { name: "劇的フィルム・ノワール", features: "強烈な明暗対照（キアロスクーロ）、重厚なシルエット" },
+      12: { name: "厚塗りインパスト油絵", features: "パレットナイフの質感、リズミカルな筆致、鮮やかな色の重なり" },
     }
   }
 };
 
 export const GALLERY_ITEMS: GalleryItem[] = [
-  { id: '1', imageUrl: 'https://placehold.co/512x512/4F46E5/FFFFFF.png?text=Vector+Boy', styleId: 1, author: 'User123' },
-  { id: '2', imageUrl: 'https://placehold.co/512x512/EA580C/FFFFFF.png?text=Marker+Girl', styleId: 2, author: 'ArtFan' },
-  { id: '3', imageUrl: 'https://placehold.co/512x512/FACC15/000000.png?text=Minimal+Cat', styleId: 3, author: 'Minimalist' },
-  { id: '4', imageUrl: 'https://placehold.co/512x512/EC4899/FFFFFF.png?text=Riso+Print', styleId: 4, author: 'PrintMaster' },
-  { id: '5', imageUrl: 'https://placehold.co/512x512/EF4444/FFFFFF.png?text=Cartoon+Hero', styleId: 5, author: 'ToonLover' },
-  { id: '6', imageUrl: 'https://placehold.co/512x512/2DD4BF/FFFFFF.png?text=Watercolor', styleId: 6, author: 'WaterColorist' },
-  { id: '7', imageUrl: 'https://placehold.co/512x512/475569/FFFFFF.png?text=Cyber+Punk', styleId: 7, author: 'Techie' },
-  { id: '8', imageUrl: 'https://placehold.co/512x512/4F46E5/FFFFFF.png?text=Noir+Scene', styleId: 8, author: 'Detective' },
+  { id: '1', imageUrl: 'images/illus00.png', styleId: 1, author: 'Style_Gen' },
+  { id: '2', imageUrl: 'images/illus01.png', styleId: 2, author: 'Marker_Pro' },
+  { id: '3', imageUrl: 'images/illus011.png', styleId: 3, author: 'Flat_Artist' },
+  { id: '4', imageUrl: 'images/illus012.png', styleId: 4, author: 'Riso_Fan' },
+  { id: '5', imageUrl: 'images/illus02.png', styleId: 5, author: 'Toon_King' },
+  { id: '6', imageUrl: 'images/illus04.png', styleId: 6, author: 'Watercolor_Ink' },
+  { id: '7', imageUrl: 'images/illus05.png', styleId: 7, author: 'Cyber_Guy' },
+  { id: '8', imageUrl: 'images/illus06.png', styleId: 8, author: 'Comic_Artist' },
+  { id: '9', imageUrl: 'images/illus010.png', styleId: 9, author: 'Pencil_Art' },
+  { id: '10', imageUrl: 'images/illus00.png', styleId: 10, author: 'Retro_Toon' },
+  { id: '11', imageUrl: 'images/illus01.png', styleId: 11, author: 'Noir_Fan' },
+  { id: '12', imageUrl: 'images/illus011.png', styleId: 12, author: 'Oil_Master' },
+  { id: '13', imageUrl: 'images/illus012.png', styleId: 1, author: 'Pipe_Dude' },
+  { id: '14', imageUrl: 'images/illus02.png', styleId: 5, author: 'Render_Pro' },
 ];
