@@ -47,10 +47,4 @@ export interface StickerRecord {
   imageUrl: string;
   styleId: number;
   timestamp: number;
-  sourceImageId?: string;
-}
-
-export interface StickerSet {
-  sourceId: string;
-  stickers: StickerRecord[];
 }
