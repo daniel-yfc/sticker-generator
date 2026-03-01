@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateSticker, generateStickerSet } from './geminiService';
+import { GoogleGenAI } from '@google/genai';
 import { STYLES } from '../constants';
 import { GoogleGenAI } from '@google/genai';
 
@@ -119,8 +120,8 @@ describe('geminiService', () => {
                 inlineData: {
                   data: 'generated-image-base64',
                 },
-              },
-            ],
+              ],
+            },
           },
         },
       ],
@@ -158,13 +159,12 @@ describe('geminiService', () => {
                 inlineData: {
                   data: 'generated-image-base64',
                 },
-              },
-            ],
+              ],
+            },
           },
-        },
-      ],
-    };
-    mockGenerateContent.mockResolvedValue(mockResponse);
+        ],
+      };
+      mockGenerateContent.mockResolvedValue(mockResponse);
 
     const result = await generateSticker('just-a-base64-string', STYLES[0]);
 
