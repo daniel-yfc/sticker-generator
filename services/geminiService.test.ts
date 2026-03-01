@@ -1,4 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { generateSticker } from './geminiService';
+import { GoogleGenAI } from '@google/genai';
+
+// Mock the @google/genai module
+vi.mock('@google/genai', () => {
+  return {
+    GoogleGenAI: vi.fn(),
+  };
+});
+
 import { generateSticker, generateStickerSet } from './geminiService';
 import { STYLES } from '../constants';
 
@@ -27,6 +37,39 @@ describe('geminiService', () => {
     process.env.API_KEY = 'test-api-key';
   });
 
+  describe('generateSticker', () => {
+    it('throws an error if the generation finishes with SAFETY reason', async () => {
+      // Setup the mock to return a safety response
+      const mockGenerateContent = vi.fn().mockResolvedValue({
+        candidates: [
+          {
+            finishReason: 'SAFETY',
+            content: { parts: [] },
+          },
+        ],
+      });
+
+      // @ts-ignore
+      vi.mocked(GoogleGenAI).mockImplementation(function() {
+        return {
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        };
+      });
+
+      const fakeImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      const fakeStyle = {
+        id: 1,
+        style: 'Test Style',
+        basePrompt: 'Test base prompt',
+        modifiers: { person: 'person', object: 'object', landscape: 'landscape' },
+        previewColor: 'red',
+        iconName: 'icon'
+      };
+
+      await expect(generateSticker(fakeImageBase64, fakeStyle)).rejects.toThrow(/^error_safety$/);
+    });
   it('generateSticker throws error if API key is missing', async () => {
     delete process.env.API_KEY;
     await expect(generateSticker('base64data', STYLES[0])).rejects.toThrow('API Key is missing');
@@ -56,6 +99,84 @@ describe('geminiService', () => {
     // We can't easily check constructor arguments with class mock this way unless we spy on it,
     // but the main thing is it runs.
     expect(mockGenerateContent).toHaveBeenCalled();
+    expect(result).toBe('data:image/png;base64,generated-image-base64');
+  });
+
+  it('generateSticker handles unsupported MIME types by defaulting to image/jpeg', async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          finishReason: 'STOP',
+          content: {
+            parts: [
+              {
+                inlineData: {
+                  data: 'generated-image-base64',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    mockGenerateContent.mockResolvedValue(mockResponse);
+
+    const result = await generateSticker('data:application/pdf;base64,some-pdf-data', STYLES[0]);
+
+    // Check that it was called with 'image/jpeg' and the right data
+    expect(mockGenerateContent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contents: expect.objectContaining({
+          parts: expect.arrayContaining([
+            expect.objectContaining({
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: 'some-pdf-data', // The updated replace regex will extract the base64 part
+              }
+            })
+          ])
+        })
+      })
+    );
+    expect(result).toBe('data:image/png;base64,generated-image-base64');
+  });
+
+  it('generateSticker handles base64 string without data URI scheme by defaulting to image/jpeg', async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          finishReason: 'STOP',
+          content: {
+            parts: [
+              {
+                inlineData: {
+                  data: 'generated-image-base64',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    mockGenerateContent.mockResolvedValue(mockResponse);
+
+    const result = await generateSticker('just-a-base64-string', STYLES[0]);
+
+    // Check that it was called with 'image/jpeg' and the right data
+    expect(mockGenerateContent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contents: expect.objectContaining({
+          parts: expect.arrayContaining([
+            expect.objectContaining({
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: 'just-a-base64-string',
+              }
+            })
+          ])
+        })
+      })
+    );
     expect(result).toBe('data:image/png;base64,generated-image-base64');
   });
 
