@@ -40,7 +40,8 @@ const App: React.FC = () => {
   const isProcessing = status === AppStatus.PROCESSING || status === AppStatus.SET_PROCESSING;
 
   const t = (key: string) => {
-    return (TRANSLATIONS[language] as any)[key] || key;
+    const translation = TRANSLATIONS[language];
+    return translation[key as keyof typeof translation] as string || key;
   };
 
   useEffect(() => {
@@ -235,7 +236,7 @@ const App: React.FC = () => {
                         onSelect={handleStyleSelect} 
                         disabled={isProcessing}
                         t={t}
-                        stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                        stylesTranslation={TRANSLATIONS[language].styles}
                         mode="sidebar"
                       />
                    </div>
@@ -336,7 +337,7 @@ const App: React.FC = () => {
                             onReuse={handleReuse}
                             onImageUpdate={handleImageUpdate}
                             t={t}
-                            stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                            stylesTranslation={TRANSLATIONS[language].styles}
                          />
                       )}
 
@@ -346,7 +347,7 @@ const App: React.FC = () => {
                             style={selectedStyle}
                             onReset={handleReset}
                             t={t}
-                            stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                            stylesTranslation={TRANSLATIONS[language].styles}
                          />
                       )}
 
@@ -401,7 +402,7 @@ const App: React.FC = () => {
                        {STYLES.slice(0, 4).map(style => (
                           <div key={style.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
                              <div className={`w-10 h-10 rounded-lg ${style.previewColor}`}></div>
-                             <div className="text-xs font-bold text-gray-700">{(TRANSLATIONS[language] as any).styles[style.id].name}</div>
+                             <div className="text-xs font-bold text-gray-700">{TRANSLATIONS[language].styles[style.id].name}</div>
                           </div>
                        ))}
                     </div>
@@ -414,7 +415,7 @@ const App: React.FC = () => {
               <Gallery 
                 onSelectStyle={handleGallerySelect} 
                 t={t}
-                stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                stylesTranslation={TRANSLATIONS[language].styles}
               />
             )}
 
@@ -440,7 +441,7 @@ const App: React.FC = () => {
                   history={history} 
                   onDelete={deleteFromHistory} 
                   t={t}
-                  stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                  stylesTranslation={TRANSLATIONS[language].styles}
                 />
               </div>
             )}
