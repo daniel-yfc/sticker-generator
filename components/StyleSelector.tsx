@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { STYLES } from '../constants';
 import { StyleOption } from '../types';
 import { CheckCircle2, Info } from 'lucide-react';
@@ -16,6 +16,27 @@ interface StyleSelectorProps {
 const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, disabled, t, stylesTranslation, mode = 'grid' }) => {
   const selectedStyleName = stylesTranslation[selectedStyle.id]?.name || selectedStyle.id;
   const [hoveredStyle, setHoveredStyle] = useState<number | null>(null);
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const id = e.currentTarget.dataset.id;
+    if (id) {
+      setHoveredStyle(Number(id));
+    }
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredStyle(null);
+  }, []);
+
+  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const id = e.currentTarget.dataset.id;
+    if (id) {
+      const style = STYLES.find((s) => s.id === Number(id));
+      if (style) {
+        onSelect(style);
+      }
+    }
+  }, [onSelect]);
 
   const renderIcon = (iconName: string) => {
     const IconComponent = (Icons as any)[iconName] || Icons.Image;
@@ -51,12 +72,14 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, 
             return (
               <div 
                 key={style.id} 
+                data-id={style.id}
                 className="relative"
-                onMouseEnter={() => setHoveredStyle(style.id)}
-                onMouseLeave={() => setHoveredStyle(null)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
               >
                 <button
-                  onClick={() => onSelect(style)}
+                  data-id={style.id}
+                  onClick={handleClick}
                   disabled={disabled}
                   className={`
                     w-full flex items-center gap-3 p-2 rounded-lg transition-all duration-200 text-left group
@@ -107,12 +130,14 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, 
           return (
             <div 
               key={style.id} 
+              data-id={style.id}
               className="relative"
-              onMouseEnter={() => setHoveredStyle(style.id)}
-              onMouseLeave={() => setHoveredStyle(null)}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
             >
               <button
-                onClick={() => onSelect(style)}
+                data-id={style.id}
+                onClick={handleClick}
                 disabled={disabled}
                 className={`
                   w-full relative group flex flex-col items-start p-3 rounded-xl border-2 transition-all duration-200 text-left

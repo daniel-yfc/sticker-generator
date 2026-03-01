@@ -40,7 +40,7 @@ describe('geminiService', () => {
   describe('generateSticker', () => {
     it('throws an error if the generation finishes with SAFETY reason', async () => {
       // Setup the mock to return a safety response
-      const mockGenerateContent = vi.fn().mockResolvedValue({
+      mockGenerateContent.mockResolvedValue({
         candidates: [
           {
             finishReason: 'SAFETY',
@@ -49,14 +49,6 @@ describe('geminiService', () => {
         ],
       });
 
-      // @ts-ignore
-      vi.mocked(GoogleGenAI).mockImplementation(function() {
-        return {
-          models: {
-            generateContent: mockGenerateContent,
-          },
-        };
-      });
 
       const fakeImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
       const fakeStyle = {
@@ -140,4 +132,5 @@ describe('geminiService', () => {
     expect(results).toHaveLength(2);
     expect(mockGenerateContent).toHaveBeenCalledTimes(2);
   });
+});
 });
