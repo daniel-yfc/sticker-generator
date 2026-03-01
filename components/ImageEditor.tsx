@@ -13,9 +13,11 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Use refs for high-frequency events to avoid re-renders
+  const positionRef = useRef({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
 
   // Load image
   useEffect(() => {
@@ -23,28 +25,24 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
     img.src = imageSrc;
     img.onload = () => {
       setImage(img);
-      // Initial center position
-      setPosition({ x: 0, y: 0 });
+      positionRef.current = { x: 0, y: 0 };
     };
   }, [imageSrc]);
 
-  // Draw canvas
-  useEffect(() => {
+  // Define drawing function that uses current state/refs
+  const drawCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas || !image) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size (display size)
     const CANVAS_SIZE = 400;
     canvas.width = CANVAS_SIZE;
     canvas.height = CANVAS_SIZE;
 
-    // Clear background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw transparent grid background
     const patternSize = 20;
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -59,14 +57,11 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
 
     ctx.save();
     
-    // Move to center
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
-    ctx.translate(position.x, position.y);
+    ctx.translate(positionRef.current.x, positionRef.current.y);
 
-    // Draw image centered
-    // Calculate aspect ratio fit
     const scaleFactor = Math.min(canvas.width / image.width, canvas.height / image.height) * 0.8;
     const drawWidth = image.width * scaleFactor;
     const drawHeight = image.height * scaleFactor;
@@ -81,58 +76,52 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
 
     ctx.restore();
 
-    // Draw overlay circle/frame guide
     ctx.strokeStyle = '#4F46E5';
     ctx.lineWidth = 2;
     ctx.setLineDash([10, 5]);
     ctx.beginPath();
     ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width * 0.45, 0, Math.PI * 2);
     ctx.stroke();
+  };
 
-  }, [image, scale, rotation, position]);
+  // Draw on changes
+  useEffect(() => {
+    drawCanvas();
+  }, [image, scale, rotation]);
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsDragging(true);
+    isDraggingRef.current = true;
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-    setDragStart({ x: clientX - position.x, y: clientY - position.y });
+    dragStartRef.current = {
+      x: clientX - positionRef.current.x * scale,
+      y: clientY - positionRef.current.y * scale
+    };
   };
 
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
     
-    // Reverse movement because we translate context, not image coords directly in standard intuition
-    // Actually, moving the image means changing the translation.
-    // However, since we apply rotation, moving X might mean moving Y visually if rotated 90deg.
-    // For simplicity in this lightweight editor, we translate before rotation in state, but logic above applies rotate first.
-    // Let's adjust: We want the user to drag the IMAGE.
+    const dx = clientX - dragStartRef.current.x;
+    const dy = clientY - dragStartRef.current.y;
     
-    // Simplified logic: Just update raw x/y. The user adjusts visually.
-    // Note: Due to rotation context order above (translate center -> rotate -> scale -> translate pos), 
-    // dragging might feel 'rotated' if we don't account for it. 
-    // For a perfect UX we'd project the vector, but for this sticker tool, standard XY adjustment is usually acceptable or we just rotate 0/90/180/270.
-    
-    // If we only allow 90 degree increments, it's easier.
-    
-    const dx = clientX - dragStart.x;
-    const dy = clientY - dragStart.y;
-    
-    // Adjust dx/dy based on rotation to match mouse movement
     let rotRad = (-rotation * Math.PI) / 180;
     const rotatedDx = dx * Math.cos(rotRad) - dy * Math.sin(rotRad);
     const rotatedDy = dx * Math.sin(rotRad) + dy * Math.cos(rotRad);
 
-    // Adjust for scale
-    setPosition({
+    positionRef.current = {
       x: rotatedDx / scale,
       y: rotatedDy / scale
-    });
+    };
+
+    // Trigger paint immediately without React state update overhead
+    requestAnimationFrame(drawCanvas);
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    isDraggingRef.current = false;
   };
 
   const handleConfirm = () => {

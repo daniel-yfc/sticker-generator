@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Download, RefreshCcw, Check, Wand2, Repeat } from 'lucide-react';
-import { StyleOption } from '../types';
+import { StyleOption, StyleTranslation } from '../types';
 import { downloadImage } from '../utils/download';
+import { applyMagicWand } from '../utils/imageUtils';
 
 interface ResultDisplayProps {
   imageUrl: string;
@@ -10,55 +11,26 @@ interface ResultDisplayProps {
   onReuse: () => void;
   onImageUpdate: (newImage: string) => void;
   t: (key: string) => any;
-  stylesTranslation: any;
+  stylesTranslation: Record<number, StyleTranslation>;
 }
 
 const ResultDisplay: React.FC<ResultDisplayProps> = ({ imageUrl, style, onReset, onReuse, onImageUpdate, t, stylesTranslation }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const handleDownload = () => {
     downloadImage(imageUrl, `sticker-pro-${style.id}-${Date.now()}.png`);
   };
 
-  // Client-side background removal (Magic Wand)
-  // Simple algorithm: Flood fill transparency starting from corners
-  const handleMagicWand = () => {
+  const handleMagicWand = async () => {
     setIsProcessing(true);
-    const img = new Image();
-    img.src = imageUrl;
-    img.crossOrigin = "Anonymous";
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-      
-      // Simple logic: Assume corners are background. Make white/light pixels transparent if they are connected to corners?
-      // For stickers, usually the background is white. Let's make pure white transparent.
-      // A robust flood fill is better, but expensive. Let's try color keying near white.
-      
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        
-        // Check for white/near-white
-        if (r > 240 && g > 240 && b > 240) {
-          data[i + 3] = 0; // Alpha 0
-        }
-      }
-      
-      ctx.putImageData(imageData, 0, 0);
-      const newUrl = canvas.toDataURL('image/png');
+    try {
+      const newUrl = await applyMagicWand(imageUrl);
       onImageUpdate(newUrl);
+    } catch (e) {
+      console.error(e);
+    } finally {
       setIsProcessing(false);
-    };
+    }
   };
   
   const styleName = stylesTranslation[style.id]?.name || style.id;

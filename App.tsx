@@ -165,9 +165,13 @@ const App: React.FC = () => {
       };
       img.src = resultImage;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(uiTimeout);
-      setErrorMessage(t(error.message));
+      if (error instanceof Error) {
+        setErrorMessage(t(error.message));
+      } else {
+        setErrorMessage(t('error_process'));
+      }
       setStatus(AppStatus.ERROR);
     }
   };
@@ -191,8 +195,12 @@ const App: React.FC = () => {
       results.forEach(imgUrl => addToHistory(imgUrl, selectedStyle.id));
       setGeneratedSet(results);
       setStatus(AppStatus.SET_SUCCESS);
-    } catch (error: any) {
-      setErrorMessage(t(error.message));
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setErrorMessage(t(error.message));
+      } else {
+        setErrorMessage(t('error_process'));
+      }
       setStatus(AppStatus.ERROR);
     }
   };

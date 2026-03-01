@@ -1,5 +1,5 @@
-import React from 'react';
-import { StickerRecord, StyleOption } from '../types';
+import React, { useCallback } from 'react';
+import { StickerRecord, StyleTranslation } from '../types';
 import { Download, Trash2, Clock } from 'lucide-react';
 import { downloadImage } from '../utils/download';
 
@@ -7,10 +7,25 @@ interface StickerHistoryProps {
   history: StickerRecord[];
   onDelete: (id: string) => void;
   t: (key: string) => any;
-  stylesTranslation: any;
+  stylesTranslation: Record<number, StyleTranslation>;
 }
 
 const StickerHistory: React.FC<StickerHistoryProps> = ({ history, onDelete, t, stylesTranslation }) => {
+  const handleDelete = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const id = e.currentTarget.dataset.id;
+    if (id) {
+      onDelete(id);
+    }
+  }, [onDelete]);
+
+  const handleDownload = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const url = e.currentTarget.dataset.url;
+    const id = e.currentTarget.dataset.id;
+    if (url && id) {
+      downloadImage(url, `sticker-${id}.png`);
+    }
+  }, []);
+
   if (history.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-300">
@@ -52,14 +67,17 @@ const StickerHistory: React.FC<StickerHistoryProps> = ({ history, onDelete, t, s
                  {/* Actions Overlay */}
                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button
-                      onClick={() => downloadImage(item.imageUrl, `sticker-${item.id}.png`)}
+                      onClick={handleDownload}
+                      data-id={item.id}
+                      data-url={item.imageUrl}
                       className="p-2 bg-white text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors"
                       title={t('btn_download')}
                     >
                       <Download className="w-4 h-4" />
                     </button>
                     <button 
-                      onClick={() => onDelete(item.id)}
+                      onClick={handleDelete}
+                      data-id={item.id}
                       className="p-2 bg-white text-red-500 rounded-full hover:bg-red-50 transition-colors"
                       title="Delete"
                     >
