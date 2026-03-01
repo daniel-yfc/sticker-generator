@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, useMemo } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { STYLES } from '../constants';
 import { StyleOption } from '../types';
 import { CheckCircle2, Info } from 'lucide-react';
@@ -13,26 +13,18 @@ interface StyleSelectorProps {
   mode?: 'grid' | 'sidebar';
 }
 
-interface StyleItemProps {
-  styleOption: StyleOption;
-  isSelected: boolean;
-  isHovered: boolean;
-  styleInfo: any;
-  disabled: boolean;
-  onSelect: (style: StyleOption) => void;
-  onMouseEnter: (id: number) => void;
-  onMouseLeave: () => void;
-  mode: 'grid' | 'sidebar';
-}
-
 const renderIcon = (iconName: string) => {
   const IconComponent = (Icons as any)[iconName] || Icons.Image;
   return <IconComponent className="w-5 h-5 text-white" />;
 };
 
-const renderTooltip = (style: StyleOption, styleInfo: any, isHovered: boolean, isGrid: boolean) => {
-  if (!isHovered) return null;
+interface TooltipProps {
+  style: StyleOption;
+  styleInfo: any;
+  isGrid?: boolean;
+}
 
+const Tooltip: React.FC<TooltipProps> = memo(({ style, styleInfo, isGrid }) => {
   if (isGrid) {
     return (
       <div className="absolute z-50 w-64 p-3 bg-gray-900 text-white text-xs rounded-xl shadow-2xl bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none animate-fadeIn">
@@ -62,60 +54,67 @@ const renderTooltip = (style: StyleOption, styleInfo: any, isHovered: boolean, i
       </div>
     </div>
   );
-};
+});
 
-const StyleItem = memo(({
-  styleOption,
-  isSelected,
-  isHovered,
-  styleInfo,
-  disabled,
-  onSelect,
-  onMouseEnter,
-  onMouseLeave,
-  mode
-}: StyleItemProps) => {
+interface StyleItemProps {
+  styleOption: StyleOption;
+  styleInfo: any;
+  isSelected: boolean;
+  disabled: boolean;
+  isHovered: boolean;
+  onMouseEnter: (id: number) => void;
+  onMouseLeave: () => void;
+  onSelect: (style: StyleOption) => void;
+}
 
+const SidebarStyleItem: React.FC<StyleItemProps> = memo(({
+  styleOption, styleInfo, isSelected, disabled, isHovered, onMouseEnter, onMouseLeave, onSelect
+}) => {
   const handleMouseEnter = useCallback(() => onMouseEnter(styleOption.id), [onMouseEnter, styleOption.id]);
   const handleSelect = useCallback(() => onSelect(styleOption), [onSelect, styleOption]);
 
-  if (mode === 'sidebar') {
-    return (
-      <div
-        className="relative"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={onMouseLeave}
+  return (
+    <div
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <button
+        onClick={handleSelect}
+        disabled={disabled}
+        className={`
+          w-full flex items-center gap-3 p-2 rounded-lg transition-all duration-200 text-left group
+          ${isSelected
+            ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200'
+            : 'hover:bg-gray-50 text-gray-700'}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `}
       >
-        <button
-          onClick={handleSelect}
-          disabled={disabled}
-          className={`
-            w-full flex items-center gap-3 p-2 rounded-lg transition-all duration-200 text-left group
-            ${isSelected
-              ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200'
-              : 'hover:bg-gray-50 text-gray-700'}
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-          `}
-        >
-          <div className={`w-10 h-10 rounded-md ${styleOption.previewColor} shrink-0 relative overflow-hidden shadow-sm group-hover:scale-105 transition-transform flex items-center justify-center`}>
-              <div className="absolute inset-0 bg-black/10"></div>
-              <div className="relative z-10">
-                {renderIcon(styleOption.iconName)}
-              </div>
+        <div className={`w-10 h-10 rounded-md ${styleOption.previewColor} shrink-0 relative overflow-hidden shadow-sm group-hover:scale-105 transition-transform flex items-center justify-center`}>
+           <div className="absolute inset-0 bg-black/10"></div>
+           <div className="relative z-10">
+             {renderIcon(styleOption.iconName)}
+           </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-bold text-xs truncate flex items-center gap-1">
+            {styleInfo.name}
+            <Info className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="font-bold text-xs truncate flex items-center gap-1">
-              {styleInfo.name}
-              <Info className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="text-[10px] text-gray-400 truncate opacity-80">{styleInfo.features}</div>
-          </div>
-          {isSelected && <CheckCircle2 className="w-4 h-4 text-indigo-600 ml-auto shrink-0" />}
-        </button>
-        {renderTooltip(styleOption, styleInfo, isHovered, false)}
-      </div>
-    );
-  }
+          <div className="text-[10px] text-gray-400 truncate opacity-80">{styleInfo.features}</div>
+        </div>
+        {isSelected && <CheckCircle2 className="w-4 h-4 text-indigo-600 ml-auto shrink-0" />}
+      </button>
+      {isHovered && <Tooltip style={styleOption} styleInfo={styleInfo} />}
+    </div>
+  );
+});
+
+const GridStyleItem: React.FC<StyleItemProps> = memo(({
+  styleOption, styleInfo, isSelected, disabled, isHovered, onMouseEnter, onMouseLeave, onSelect
+}) => {
+  const handleMouseEnter = useCallback(() => onMouseEnter(styleOption.id), [onMouseEnter, styleOption.id]);
+  const handleSelect = useCallback(() => onSelect(styleOption), [onSelect, styleOption]);
 
   return (
     <div
@@ -140,7 +139,7 @@ const StyleItem = memo(({
             {renderIcon(styleOption.iconName)}
           </div>
           <div className="absolute bottom-2 right-2 text-white/90 text-xs font-bold font-mono">
-              #{styleOption.id.toString().padStart(2, '0')}
+             #{styleOption.id.toString().padStart(2, '0')}
           </div>
         </div>
 
@@ -158,7 +157,7 @@ const StyleItem = memo(({
         </div>
       </button>
 
-      {renderTooltip(styleOption, styleInfo, isHovered, true)}
+      {isHovered && <Tooltip style={styleOption} styleInfo={styleInfo} isGrid={true} />}
     </div>
   );
 });
@@ -169,26 +168,32 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, 
 
   const handleMouseEnter = useCallback((id: number) => setHoveredStyle(id), []);
   const handleMouseLeave = useCallback(() => setHoveredStyle(null), []);
+  const handleSelect = useCallback((style: StyleOption) => onSelect(style), [onSelect]);
 
   if (mode === 'sidebar') {
     return (
       <div className="space-y-3 h-full overflow-y-auto pr-2 custom-scrollbar pb-20">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">{t('step1_title')}</h3>
         <div className="space-y-2 relative">
-          {STYLES.map((style) => (
-            <StyleItem
-              key={style.id}
-              styleOption={style}
-              isSelected={selectedStyle.id === style.id}
-              isHovered={hoveredStyle === style.id}
-              styleInfo={stylesTranslation[style.id] || { name: `Style ${style.id}`, features: '' }}
-              disabled={disabled}
-              onSelect={onSelect}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-              mode="sidebar"
-            />
-          ))}
+          {STYLES.map((style) => {
+            const isSelected = selectedStyle.id === style.id;
+            const styleInfo = stylesTranslation[style.id] || { name: `Style ${style.id}`, features: '' };
+            const isHovered = hoveredStyle === style.id;
+
+            return (
+              <SidebarStyleItem
+                key={style.id}
+                styleOption={style}
+                styleInfo={styleInfo}
+                isSelected={isSelected}
+                disabled={disabled}
+                isHovered={isHovered}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                onSelect={handleSelect}
+              />
+            );
+          })}
         </div>
       </div>
     );
@@ -204,23 +209,28 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, 
       </div>
       
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {STYLES.map((style) => (
-          <StyleItem
-            key={style.id}
-            styleOption={style}
-            isSelected={selectedStyle.id === style.id}
-            isHovered={hoveredStyle === style.id}
-            styleInfo={stylesTranslation[style.id] || { name: `Style ${style.id}`, features: '' }}
-            disabled={disabled}
-            onSelect={onSelect}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            mode="grid"
-          />
-        ))}
+        {STYLES.map((style) => {
+          const isSelected = selectedStyle.id === style.id;
+          const styleInfo = stylesTranslation[style.id] || { name: `Style ${style.id}`, features: '' };
+          const isHovered = hoveredStyle === style.id;
+
+          return (
+            <GridStyleItem
+              key={style.id}
+              styleOption={style}
+              styleInfo={styleInfo}
+              isSelected={isSelected}
+              disabled={disabled}
+              isHovered={isHovered}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onSelect={handleSelect}
+            />
+          );
+        })}
       </div>
     </div>
   );
 };
 
-export default StyleSelector;
+export default StyleSelector; // Removed memo at top level, added internally
