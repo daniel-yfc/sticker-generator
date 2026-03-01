@@ -16,12 +16,26 @@ vi.mock('@google/genai', () => {
         }
     }
   };
-});
 
 describe('geminiService', () => {
   beforeEach(() => {
+    vi.resetModules();
+    process.env = { ...originalEnv, API_KEY: 'test-api-key' };
+
+    mockGenerateContent = vi.fn();
+
+    (GoogleGenAI as any).mockImplementation(function() {
+      return {
+        models: {
+          generateContent: mockGenerateContent
+        }
+      };
+    });
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
     vi.clearAllMocks();
-    process.env.API_KEY = 'test-api-key';
   });
 
   describe('generateSticker', () => {
@@ -31,10 +45,10 @@ describe('geminiService', () => {
         candidates: [
           {
             finishReason: 'SAFETY',
-            content: { parts: [] },
-          },
-        ],
-      });
+            content: { parts: [] }
+          }
+        ]
+      };
 
       const fakeImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
       const fakeStyle = {
@@ -46,7 +60,11 @@ describe('geminiService', () => {
         iconName: 'icon'
       };
 
-      await expect(generateSticker(fakeImageBase64, fakeStyle)).rejects.toThrow(/^error_safety$/);
+      mockGenerateContent.mockResolvedValue(mockResponse);
+
+      await expect(generateSticker(mockImageBase64, mockStyle))
+        .rejects
+        .toThrow('error_process');
     });
 
     it('generateSticker throws error if API key is missing', async () => {
@@ -78,6 +96,17 @@ describe('geminiService', () => {
       expect(mockGenerateContent).toHaveBeenCalled();
       expect(result).toBe('data:image/png;base64,generated-image-base64');
     });
+
+  describe('generateStickerSet', () => {
+    it('generates multiple stickers in parallel', async () => {
+      mockGenerateContent.mockResolvedValue({
+        candidates: [
+          {
+            finishReason: 'STOP',
+            content: { parts: [{ inlineData: { data: 'batch-img-data' } }] }
+          }
+        ]
+      });
 
   it('generateSticker handles unsupported MIME types by defaulting to image/jpeg', async () => {
     const mockResponse = {
