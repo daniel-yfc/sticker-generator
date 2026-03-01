@@ -70,7 +70,14 @@ const App: React.FC = () => {
   };
 
   const deleteFromHistory = (id: string) => {
-    setHistory(prev => prev.filter(item => item.id !== id));
+    setHistory(prev => {
+      const index = prev.findIndex(item => item.id === id);
+      if (index === -1) return prev;
+
+      const next = [...prev];
+      next.splice(index, 1);
+      return next;
+    });
   };
 
   const handleStyleSelect = useCallback((style: StyleOption) => {
