@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { StyleOption } from "../types";
 
 /**
@@ -55,7 +55,7 @@ export const generateSticker = async (
 
     const finalPrompt = basePrompt + extraInstruction;
 
-    const response: any = await withTimeout(
+    const response: GenerateContentResponse = await withTimeout(
       ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
