@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { STYLES } from '../constants';
 import { StyleOption } from '../types';
 import { CheckCircle2, Info } from 'lucide-react';
@@ -16,6 +16,21 @@ interface StyleSelectorProps {
 const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, disabled, t, stylesTranslation, mode = 'grid' }) => {
   const selectedStyleName = stylesTranslation[selectedStyle.id]?.name || selectedStyle.id;
   const [hoveredStyle, setHoveredStyle] = useState<number | null>(null);
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const id = Number(e.currentTarget.dataset.id);
+    setHoveredStyle(id);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredStyle(null);
+  }, []);
+
+  const handleSelect = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const id = Number(e.currentTarget.dataset.id);
+    const style = STYLES.find(s => s.id === id);
+    if (style) onSelect(style);
+  }, [onSelect]);
 
   const renderIcon = (iconName: string) => {
     const IconComponent = (Icons as any)[iconName] || Icons.Image;
@@ -52,11 +67,11 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, 
               <div 
                 key={style.id} 
                 className="relative"
-                onMouseEnter={() => setHoveredStyle(style.id)}
-                onMouseLeave={() => setHoveredStyle(null)}
+                onMouseEnter={handleMouseEnter} data-id={style.id}
+                onMouseLeave={handleMouseLeave}
               >
                 <button
-                  onClick={() => onSelect(style)}
+                  onClick={handleSelect} data-id={style.id}
                   disabled={disabled}
                   className={`
                     w-full flex items-center gap-3 p-2 rounded-lg transition-all duration-200 text-left group
@@ -108,11 +123,11 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, 
             <div 
               key={style.id} 
               className="relative"
-              onMouseEnter={() => setHoveredStyle(style.id)}
-              onMouseLeave={() => setHoveredStyle(null)}
+              onMouseEnter={handleMouseEnter} data-id={style.id}
+              onMouseLeave={handleMouseLeave}
             >
               <button
-                onClick={() => onSelect(style)}
+                onClick={handleSelect} data-id={style.id}
                 disabled={disabled}
                 className={`
                   w-full relative group flex flex-col items-start p-3 rounded-xl border-2 transition-all duration-200 text-left
