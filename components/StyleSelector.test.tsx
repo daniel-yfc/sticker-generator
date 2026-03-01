@@ -1,11 +1,15 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import StyleSelector from './StyleSelector';
 import { STYLES } from '../constants';
 
 const mockT = vi.fn((key) => key);
 
 describe('StyleSelector performance baseline', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('measures render time of StyleSelector', () => {
     const start = performance.now();
     render(

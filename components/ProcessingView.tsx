@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface ProcessingViewProps {
-  t: (key: string) => any;
+  t: (key: string) => any; // Keep 'any' here or use union because 'processing_steps' returns an array of strings
 }
 
 const ProcessingView: React.FC<ProcessingViewProps> = ({ t }) => {

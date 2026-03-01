@@ -6,7 +6,7 @@ import { downloadImage } from '../utils/download';
 interface StickerHistoryProps {
   history: StickerRecord[];
   onDelete: (id: string) => void;
-  t: (key: string) => any;
+  t: (key: string) => string;
   stylesTranslation: Record<number, StyleTranslation>;
 }
 

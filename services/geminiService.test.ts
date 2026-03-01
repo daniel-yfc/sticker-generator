@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generateSticker, generateStickerSet } from './geminiService';
 import { GoogleGenAI } from '@google/genai';
 import { STYLES } from '../constants';
-import { GoogleGenAI } from '@google/genai';
+
+const originalEnv = process.env;
 
 // Mock the GoogleGenAI library
-const mockGenerateContent = vi.fn();
+let mockGenerateContent = vi.fn();
 
 vi.mock('@google/genai', () => {
   return {
@@ -13,25 +14,17 @@ vi.mock('@google/genai', () => {
         constructor() {
         }
         models = {
-            generateContent: mockGenerateContent
+            generateContent: (...args: any[]) => mockGenerateContent(...args)
         }
     }
   };
+});
 
 describe('geminiService', () => {
   beforeEach(() => {
     vi.resetModules();
     process.env = { ...originalEnv, API_KEY: 'test-api-key' };
-
     mockGenerateContent = vi.fn();
-
-    (GoogleGenAI as any).mockImplementation(function() {
-      return {
-        models: {
-          generateContent: mockGenerateContent
-        }
-      };
-    });
   });
 
   afterEach(() => {
@@ -49,7 +42,7 @@ describe('geminiService', () => {
             content: { parts: [] }
           }
         ]
-      };
+      });
 
       const fakeImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
       const fakeStyle = {
@@ -61,11 +54,9 @@ describe('geminiService', () => {
         iconName: 'icon'
       };
 
-      mockGenerateContent.mockResolvedValue(mockResponse);
-
-      await expect(generateSticker(mockImageBase64, mockStyle))
+      await expect(generateSticker(fakeImageBase64, fakeStyle))
         .rejects
-        .toThrow('error_process');
+        .toThrow('error_safety');
     });
 
     it('generateSticker throws error if API key is missing', async () => {
@@ -98,108 +89,7 @@ describe('geminiService', () => {
       expect(result).toBe('data:image/png;base64,generated-image-base64');
     });
 
-  describe('generateStickerSet', () => {
-    it('generates multiple stickers in parallel', async () => {
-      mockGenerateContent.mockResolvedValue({
-        candidates: [
-          {
-            finishReason: 'STOP',
-            content: { parts: [{ inlineData: { data: 'batch-img-data' } }] }
-          }
-        ]
-      });
-
-  it('generateSticker handles unsupported MIME types by defaulting to image/jpeg', async () => {
-    const mockResponse = {
-      candidates: [
-        {
-          finishReason: 'STOP',
-          content: {
-            parts: [
-              {
-                inlineData: {
-                  data: 'generated-image-base64',
-                },
-              ],
-            },
-          },
-        },
-      ],
-    };
-    mockGenerateContent.mockResolvedValue(mockResponse);
-
-    const result = await generateSticker('data:application/pdf;base64,some-pdf-data', STYLES[0]);
-
-    // Check that it was called with 'image/jpeg' and the right data
-    expect(mockGenerateContent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        contents: expect.objectContaining({
-          parts: expect.arrayContaining([
-            expect.objectContaining({
-              inlineData: {
-                mimeType: 'image/jpeg',
-                data: 'some-pdf-data', // The updated replace regex will extract the base64 part
-              }
-            })
-          ])
-        })
-      })
-    );
-    expect(result).toBe('data:image/png;base64,generated-image-base64');
-  });
-
-  it('generateSticker handles base64 string without data URI scheme by defaulting to image/jpeg', async () => {
-    const mockResponse = {
-      candidates: [
-        {
-          finishReason: 'STOP',
-          content: {
-            parts: [
-              {
-                inlineData: {
-                  data: 'generated-image-base64',
-                },
-              ],
-            },
-          },
-        ],
-      };
-      mockGenerateContent.mockResolvedValue(mockResponse);
-
-    const result = await generateSticker('just-a-base64-string', STYLES[0]);
-
-    // Check that it was called with 'image/jpeg' and the right data
-    expect(mockGenerateContent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        contents: expect.objectContaining({
-          parts: expect.arrayContaining([
-            expect.objectContaining({
-              inlineData: {
-                mimeType: 'image/jpeg',
-                data: 'just-a-base64-string',
-              }
-            })
-          ])
-        })
-      })
-    );
-    expect(result).toBe('data:image/png;base64,generated-image-base64');
-  });
-
-  it('generateSticker handles safety error', async () => {
-    const mockResponse = {
-      candidates: [
-        {
-          finishReason: 'SAFETY',
-        },
-      ],
-    };
-    mockGenerateContent.mockResolvedValue(mockResponse);
-
-      await expect(generateSticker('data:image/png;base64,source-image', STYLES[0])).rejects.toThrow('error_safety');
-    });
-
-    it('generateStickerSet generates multiple stickers', async () => {
+    it('generateSticker handles unsupported MIME types by defaulting to image/jpeg', async () => {
       const mockResponse = {
         candidates: [
           {
@@ -218,12 +108,95 @@ describe('geminiService', () => {
       };
       mockGenerateContent.mockResolvedValue(mockResponse);
 
+      const result = await generateSticker('data:application/pdf;base64,some-pdf-data', STYLES[0]);
+
+      // Check that it was called with 'image/jpeg' and the right data
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contents: expect.objectContaining({
+            parts: expect.arrayContaining([
+              expect.objectContaining({
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: 'some-pdf-data', // The updated replace regex will extract the base64 part
+                }
+              })
+            ])
+          })
+        })
+      );
+      expect(result).toBe('data:image/png;base64,generated-image-base64');
+    });
+
+    it('generateSticker handles base64 string without data URI scheme by defaulting to image/jpeg', async () => {
+      const mockResponse = {
+        candidates: [
+          {
+            finishReason: 'STOP',
+            content: {
+              parts: [
+                {
+                  inlineData: {
+                    data: 'generated-image-base64',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      };
+      mockGenerateContent.mockResolvedValue(mockResponse);
+
+      const result = await generateSticker('just-a-base64-string', STYLES[0]);
+
+      // Check that it was called with 'image/jpeg' and the right data
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contents: expect.objectContaining({
+            parts: expect.arrayContaining([
+              expect.objectContaining({
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: 'just-a-base64-string',
+                }
+              })
+            ])
+          })
+        })
+      );
+      expect(result).toBe('data:image/png;base64,generated-image-base64');
+    });
+
+    it('generateSticker handles safety error', async () => {
+      const mockResponse = {
+        candidates: [
+          {
+            finishReason: 'SAFETY',
+          },
+        ],
+      };
+      mockGenerateContent.mockResolvedValue(mockResponse);
+
+      await expect(generateSticker('data:image/png;base64,source-image', STYLES[0])).rejects.toThrow('error_safety');
+    });
+  });
+
+  describe('generateStickerSet', () => {
+    it('generates multiple stickers in parallel', async () => {
+      mockGenerateContent.mockResolvedValue({
+        candidates: [
+          {
+            finishReason: 'STOP',
+            content: { parts: [{ inlineData: { data: 'batch-img-data' } }] }
+          }
+        ]
+      });
       const variations = ['var1', 'var2'];
       const results = await generateStickerSet('data:image/png;base64,source-image', STYLES[0], variations);
 
       expect(results).toHaveLength(2);
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
+      expect(results).toEqual(['data:image/png;base64,batch-img-data', 'data:image/png;base64,batch-img-data']);
     });
   });
-});
 });

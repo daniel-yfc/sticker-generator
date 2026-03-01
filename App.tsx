@@ -50,8 +50,8 @@ const App: React.FC = () => {
     if (saved) {
       try {
         setHistory(JSON.parse(saved));
-      } catch (e) {
-        logger.error("Failed to parse history", e);
+      } catch (error: unknown) {
+        logger.error("Failed to parse history", error instanceof Error ? error.message : error);
       }
     }
   }, []);
@@ -101,8 +101,8 @@ const App: React.FC = () => {
             setStatus(AppStatus.EDITING);
           };
           reader.readAsDataURL(blob);
-        } catch (err) {
-          logger.error("Failed to import gallery image", err);
+        } catch (error: unknown) {
+          logger.error("Failed to import gallery image", error instanceof Error ? error.message : error);
           setStatus(AppStatus.ERROR);
           setErrorMessage(t('error_upload'));
         }

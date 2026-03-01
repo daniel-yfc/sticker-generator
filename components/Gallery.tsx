@@ -6,7 +6,7 @@ import { Palette, PlayCircle, DownloadCloud } from 'lucide-react';
 
 interface GalleryProps {
   onSelectStyle: (styleId: number, imageUrl?: string) => void;
-  t: (key: string) => any;
+  t: (key: string) => string;
   stylesTranslation: Record<number, StyleTranslation>;
 }
 
