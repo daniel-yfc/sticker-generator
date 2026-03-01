@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Download, RefreshCcw, Check, Wand2, Repeat } from 'lucide-react';
 import { StyleOption } from '../types';
+import { downloadImage } from '../utils/download';
 
 interface ResultDisplayProps {
   imageUrl: string;
@@ -17,12 +18,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ imageUrl, style, onReset,
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `sticker-pro-${style.id}-${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadImage(imageUrl, `sticker-pro-${style.id}-${Date.now()}.png`);
   };
 
   // Client-side background removal (Magic Wand)
