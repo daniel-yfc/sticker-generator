@@ -31,7 +31,12 @@ export const generateSticker = async (
     // Extract MIME type and base64 data
     const mimeMatch = imageBase64.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,/);
     const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-    const base64Data = imageBase64.replace(/^data:image\/(?:png|jpeg|jpg|webp);base64,/, "");
+
+    // For unsupported MIME types or invalid formats, attempt a generic replacement to extract the base64 part
+    let base64Data = imageBase64.replace(/^data:image\/(?:png|jpeg|jpg|webp);base64,/, "");
+    if (base64Data === imageBase64 && imageBase64.startsWith("data:")) {
+      base64Data = imageBase64.replace(/^data:[^;]+;base64,/, "");
+    }
     
     // Improved Prompt Engineering v2
     // Focus on "Transformation" and "Artistic Medium" to avoid photorealism.
@@ -108,9 +113,9 @@ export const generateSticker = async (
     
     throw new Error("error_no_image");
 
-  } catch (error: any) {
-    logger.error("Gemini API Error details:", error);
-    const msg = error.message || "error_process";
+  } catch (error: unknown) {
+    console.error("Gemini API Error details:", error);
+    const msg = error instanceof Error ? error.message : "error_process";
     throw new Error(msg);
   }
 };
