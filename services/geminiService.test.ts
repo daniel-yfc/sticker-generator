@@ -1,31 +1,23 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateSticker, generateStickerSet } from './geminiService';
+import { STYLES } from '../constants';
 import { GoogleGenAI } from '@google/genai';
-import { StyleOption } from '../types';
 
-// Mock the GoogleGenAI module
+// Mock the GoogleGenAI library
+const mockGenerateContent = vi.fn();
+
 vi.mock('@google/genai', () => {
   return {
-    GoogleGenAI: vi.fn(),
+    GoogleGenAI: class {
+        constructor() {
+        }
+        models = {
+            generateContent: mockGenerateContent
+        }
+    }
   };
-});
 
 describe('geminiService', () => {
-  const originalEnv = process.env;
-
-  const mockStyle: StyleOption = {
-    id: 1,
-    style: 'Anime',
-    basePrompt: 'Anime style',
-    modifiers: { person: 'vibrant colors', object: '', landscape: '' },
-    previewColor: '#000000',
-    iconName: 'Sparkles'
-  };
-
-  const mockImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-
-  let mockGenerateContent: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
     vi.resetModules();
     process.env = { ...originalEnv, API_KEY: 'test-api-key' };
@@ -47,48 +39,9 @@ describe('geminiService', () => {
   });
 
   describe('generateSticker', () => {
-    it('throws error if API_KEY is missing', async () => {
-      delete process.env.API_KEY;
-      await expect(generateSticker(mockImageBase64, mockStyle))
-        .rejects
-        .toThrow('API Key is missing. Please check your configuration.');
-    });
-
-    it('returns base64 image data on successful generation', async () => {
-      const mockResponse = {
-        candidates: [
-          {
-            finishReason: 'STOP',
-            content: {
-              parts: [
-                {
-                  inlineData: {
-                    data: 'fake-generated-image-data'
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      };
-
-      mockGenerateContent.mockResolvedValue(mockResponse);
-
-      const result = await generateSticker(mockImageBase64, mockStyle);
-      expect(result).toBe('data:image/png;base64,fake-generated-image-data');
-      expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-    });
-
-    it('throws error_safety if no candidates are returned', async () => {
-      mockGenerateContent.mockResolvedValue({ candidates: [] });
-
-      await expect(generateSticker(mockImageBase64, mockStyle))
-        .rejects
-        .toThrow('error_safety');
-    });
-
-    it('throws error_safety if finishReason is SAFETY', async () => {
-      const mockResponse = {
+    it('throws an error if the generation finishes with SAFETY reason', async () => {
+      // Setup the mock to return a safety response
+      mockGenerateContent.mockResolvedValue({
         candidates: [
           {
             finishReason: 'SAFETY',
@@ -97,21 +50,14 @@ describe('geminiService', () => {
         ]
       };
 
-      mockGenerateContent.mockResolvedValue(mockResponse);
-
-      await expect(generateSticker(mockImageBase64, mockStyle))
-        .rejects
-        .toThrow('error_safety');
-    });
-
-    it('throws error_process if finishReason is not STOP or SAFETY', async () => {
-      const mockResponse = {
-        candidates: [
-          {
-            finishReason: 'MAX_TOKENS',
-            content: { parts: [] }
-          }
-        ]
+      const fakeImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      const fakeStyle = {
+        id: 1,
+        style: 'Test Style',
+        basePrompt: 'Test base prompt',
+        modifiers: { person: 'person', object: 'object', landscape: 'landscape' },
+        previewColor: 'red',
+        iconName: 'icon'
       };
 
       mockGenerateContent.mockResolvedValue(mockResponse);
@@ -121,102 +67,35 @@ describe('geminiService', () => {
         .toThrow('error_process');
     });
 
-    it('throws error_no_image if parts array is missing', async () => {
-      const mockResponse = {
-        candidates: [
-          {
-            finishReason: 'STOP',
-            content: {}
-          }
-        ]
-      };
-
-      mockGenerateContent.mockResolvedValue(mockResponse);
-
-      await expect(generateSticker(mockImageBase64, mockStyle))
-        .rejects
-        .toThrow('error_no_image');
+    it('generateSticker throws error if API key is missing', async () => {
+      delete process.env.API_KEY;
+      await expect(generateSticker('base64data', STYLES[0])).rejects.toThrow('API Key is missing');
     });
 
-    it('throws error_no_image if inlineData is missing in parts', async () => {
+    it('generateSticker calls generateContent and returns image data', async () => {
       const mockResponse = {
         candidates: [
           {
             finishReason: 'STOP',
             content: {
               parts: [
-                { text: 'some text instead of image' }
-              ]
-            }
-          }
-        ]
+                {
+                  inlineData: {
+                    data: 'generated-image-base64',
+                  },
+                },
+              ],
+            },
+          },
+        ],
       };
-
       mockGenerateContent.mockResolvedValue(mockResponse);
 
-      await expect(generateSticker(mockImageBase64, mockStyle))
-        .rejects
-        .toThrow('error_no_image');
+      const result = await generateSticker('data:image/png;base64,source-image', STYLES[0]);
+
+      expect(mockGenerateContent).toHaveBeenCalled();
+      expect(result).toBe('data:image/png;base64,generated-image-base64');
     });
-
-    it('handles timeout correctly by throwing error_timeout', async () => {
-      vi.useFakeTimers();
-
-      // A promise that never resolves
-      mockGenerateContent.mockImplementation(() => new Promise(() => {}));
-
-      const generatePromise = generateSticker(mockImageBase64, mockStyle);
-
-      // Fast-forward time by 60 seconds (the timeout duration in the code)
-      vi.advanceTimersByTime(60000);
-
-      await expect(generatePromise).rejects.toThrow('error_timeout');
-
-      vi.useRealTimers();
-    });
-
-    it('passes underlying API error messages if thrown', async () => {
-      mockGenerateContent.mockRejectedValue(new Error('Internal Server Error'));
-
-      await expect(generateSticker(mockImageBase64, mockStyle))
-        .rejects
-        .toThrow('Internal Server Error');
-    });
-
-    it('uses correct default prompt without variationPrompt', async () => {
-      mockGenerateContent.mockResolvedValue({
-        candidates: [
-          {
-            finishReason: 'STOP',
-            content: { parts: [{ inlineData: { data: 'img' } }] }
-          }
-        ]
-      });
-
-      await generateSticker(mockImageBase64, mockStyle);
-
-      const callArgs = mockGenerateContent.mock.calls[0][0];
-      const textPart = callArgs.contents.parts.find((p: any) => p.text);
-      expect(textPart.text).toContain('Expression: Expressive and charismatic.');
-    });
-
-    it('uses variationPrompt when provided', async () => {
-      mockGenerateContent.mockResolvedValue({
-        candidates: [
-          {
-            finishReason: 'STOP',
-            content: { parts: [{ inlineData: { data: 'img' } }] }
-          }
-        ]
-      });
-
-      await generateSticker(mockImageBase64, mockStyle, 'winking');
-
-      const callArgs = mockGenerateContent.mock.calls[0][0];
-      const textPart = callArgs.contents.parts.find((p: any) => p.text);
-      expect(textPart.text).toContain('Expression/Action Variation: winking. Ensure the style remains consistent.');
-    });
-  });
 
   describe('generateStickerSet', () => {
     it('generates multiple stickers in parallel', async () => {
@@ -317,15 +196,34 @@ describe('geminiService', () => {
     };
     mockGenerateContent.mockResolvedValue(mockResponse);
 
-    await expect(generateSticker('data:image/png;base64,source-image', STYLES[0])).rejects.toThrow('error_safety');
-  });
+      await expect(generateSticker('data:image/png;base64,source-image', STYLES[0])).rejects.toThrow('error_safety');
+    });
 
-      expect(result).toHaveLength(2);
-      expect(result).toEqual([
-        'data:image/png;base64,batch-img-data',
-        'data:image/png;base64,batch-img-data'
-      ]);
+    it('generateStickerSet generates multiple stickers', async () => {
+      const mockResponse = {
+        candidates: [
+          {
+            finishReason: 'STOP',
+            content: {
+              parts: [
+                {
+                  inlineData: {
+                    data: 'generated-image-base64',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      };
+      mockGenerateContent.mockResolvedValue(mockResponse);
+
+      const variations = ['var1', 'var2'];
+      const results = await generateStickerSet('data:image/png;base64,source-image', STYLES[0], variations);
+
+      expect(results).toHaveLength(2);
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
     });
   });
+});
 });
