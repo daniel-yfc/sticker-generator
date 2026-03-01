@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Download, RefreshCcw, Check, Wand2, Repeat } from 'lucide-react';
-import { StyleOption } from '../types';
+import { StyleOption, StyleTranslation } from '../types';
 import { downloadImage } from '../utils/download';
+import { applyMagicWand } from '../utils/imageUtils';
 
 interface ResultDisplayProps {
   imageUrl: string;
@@ -10,12 +11,11 @@ interface ResultDisplayProps {
   onReuse: () => void;
   onImageUpdate: (newImage: string) => void;
   t: (key: string) => any;
-  stylesTranslation: any;
+  stylesTranslation: Record<number, StyleTranslation>;
 }
 
 const ResultDisplay: React.FC<ResultDisplayProps> = ({ imageUrl, style, onReset, onReuse, onImageUpdate, t, stylesTranslation }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const handleDownload = () => {
     downloadImage(imageUrl, `sticker-pro-${style.id}-${Date.now()}.png`);

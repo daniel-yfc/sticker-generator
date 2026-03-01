@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { StyleOption } from "../types";
+import { logger } from "../utils/logger";
 
 /**
  * Helper to race a promise against a timeout
@@ -91,7 +92,7 @@ export const generateSticker = async (
     const candidate = response.candidates[0];
     
     if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-      console.error("Gemini Generation Failed. Finish Reason:", candidate.finishReason);
+      logger.error("Gemini Generation Failed. Finish Reason:", candidate.finishReason);
       if (candidate.finishReason === 'SAFETY') {
         throw new Error("error_safety");
       }
@@ -119,6 +120,32 @@ export const generateSticker = async (
   }
 };
 
+export const throttledMap = async <T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrencyLimit: number = 2
+): Promise<R[]> => {
+  const results: Promise<R>[] = [];
+  const executing = new Set<Promise<void>>();
+
+  for (const item of items) {
+    const p = Promise.resolve().then(() => fn(item));
+    results.push(p);
+
+    if (concurrencyLimit <= items.length) {
+      const e: Promise<void> = p.then(() => {
+        executing.delete(e);
+      });
+      executing.add(e);
+      if (executing.size >= concurrencyLimit) {
+        await Promise.race(executing);
+      }
+    }
+  }
+
+  return Promise.all(results);
+};
+
 /**
  * Generates a batch of variations based on a source image and style
  */
@@ -127,7 +154,5 @@ export const generateStickerSet = async (
   style: StyleOption,
   variations: string[]
 ): Promise<string[]> => {
-  // Call generation in parallel for faster results
-  const promises = variations.map(v => generateSticker(sourceImageBase64, style, v));
-  return Promise.all(promises);
+  return throttledMap(variations, (v) => generateSticker(sourceImageBase64, style, v), 2);
 };

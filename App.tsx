@@ -13,6 +13,7 @@ import { STYLES, TRANSLATIONS } from './constants';
 import { AppStatus, StyleOption, Language, ViewMode, StickerRecord } from './types';
 import { generateSticker, generateStickerSet } from './services/geminiService';
 import { AlertCircle, ArrowRight, Layers, Sticker, RefreshCw, Sparkles } from 'lucide-react';
+import { logger } from './utils/logger';
 
 const HISTORY_KEY = 'sticker_maker_history_v2';
 
@@ -50,7 +51,7 @@ const App: React.FC = () => {
       try {
         setHistory(JSON.parse(saved));
       } catch (e) {
-        console.error("Failed to parse history", e);
+        logger.error("Failed to parse history", e);
       }
     }
   }, []);
@@ -101,7 +102,7 @@ const App: React.FC = () => {
           };
           reader.readAsDataURL(blob);
         } catch (err) {
-          console.error("Failed to import gallery image", err);
+          logger.error("Failed to import gallery image", err);
           setStatus(AppStatus.ERROR);
           setErrorMessage(t('error_upload'));
         }
@@ -165,9 +166,13 @@ const App: React.FC = () => {
       };
       img.src = resultImage;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(uiTimeout);
-      setErrorMessage(t(error.message));
+      if (error instanceof Error) {
+        setErrorMessage(t(error.message));
+      } else {
+        setErrorMessage(t('error_process'));
+      }
       setStatus(AppStatus.ERROR);
     }
   };
@@ -191,8 +196,12 @@ const App: React.FC = () => {
       results.forEach(imgUrl => addToHistory(imgUrl, selectedStyle.id));
       setGeneratedSet(results);
       setStatus(AppStatus.SET_SUCCESS);
-    } catch (error: any) {
-      setErrorMessage(t(error.message));
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setErrorMessage(t(error.message));
+      } else {
+        setErrorMessage(t('error_process'));
+      }
       setStatus(AppStatus.ERROR);
     }
   };
