@@ -1,6 +1,6 @@
 import React, { useState, useCallback, memo } from 'react';
 import { STYLES } from '../constants';
-import { StyleOption } from '../types';
+import { StyleOption, StyleTranslation } from '../types';
 import { CheckCircle2, Info } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -9,18 +9,18 @@ interface StyleSelectorProps {
   onSelect: (style: StyleOption) => void;
   disabled: boolean;
   t: (key: string) => any;
-  stylesTranslation: any;
+  stylesTranslation: Record<number, StyleTranslation>;
   mode?: 'grid' | 'sidebar';
 }
 
 const renderIcon = (iconName: string) => {
-  const IconComponent = (Icons as any)[iconName] || Icons.Image;
+  const IconComponent = (Icons as Record<string, React.ElementType>)[iconName] || Icons.Image;
   return <IconComponent className="w-5 h-5 text-white" />;
 };
 
 interface TooltipProps {
   style: StyleOption;
-  styleInfo: any;
+  styleInfo: StyleTranslation;
   isGrid?: boolean;
 }
 
@@ -58,7 +58,7 @@ const Tooltip: React.FC<TooltipProps> = memo(({ style, styleInfo, isGrid }) => {
 
 interface StyleItemProps {
   styleOption: StyleOption;
-  styleInfo: any;
+  styleInfo: StyleTranslation;
   isSelected: boolean;
   disabled: boolean;
   isHovered: boolean;

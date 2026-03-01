@@ -1,16 +1,31 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { GALLERY_ITEMS } from '../constants';
-import { GalleryItem } from '../types';
+import { GalleryItem, StyleTranslation } from '../types';
 import { Palette, PlayCircle, DownloadCloud } from 'lucide-react';
 
 interface GalleryProps {
   onSelectStyle: (styleId: number, imageUrl?: string) => void;
   t: (key: string) => any;
-  stylesTranslation: any;
+  stylesTranslation: Record<number, StyleTranslation>;
 }
 
 const Gallery: React.FC<GalleryProps> = ({ onSelectStyle, t, stylesTranslation }) => {
+  const handleTryStyle = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const styleId = parseInt(e.currentTarget.dataset.styleid || "0", 10);
+    if (styleId) {
+      onSelectStyle(styleId);
+    }
+  }, [onSelectStyle]);
+
+  const handleImportSample = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const styleId = parseInt(e.currentTarget.dataset.styleid || "0", 10);
+    const imageUrl = e.currentTarget.dataset.url;
+    if (styleId && imageUrl) {
+      onSelectStyle(styleId, imageUrl);
+    }
+  }, [onSelectStyle]);
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="text-center space-y-3 mb-12">
@@ -36,14 +51,17 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectStyle, t, stylesTranslation }
                 {/* Overlay on hover */}
                 <div className="absolute inset-0 bg-indigo-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3 p-4">
                   <button 
-                    onClick={() => onSelectStyle(item.styleId)}
+                    onClick={handleTryStyle}
+                    data-styleid={item.styleId}
                     className="w-full bg-white text-indigo-600 px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 shadow-xl hover:scale-105"
                   >
                     <PlayCircle className="w-5 h-5" />
                     {t('gallery_btn_try')}
                   </button>
                   <button 
-                    onClick={() => onSelectStyle(item.styleId, item.imageUrl)}
+                    onClick={handleImportSample}
+                    data-styleid={item.styleId}
+                    data-url={item.imageUrl}
                     className="w-full bg-indigo-600 text-white px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500 shadow-xl hover:bg-indigo-700 hover:scale-105"
                   >
                     <DownloadCloud className="w-5 h-5" />
