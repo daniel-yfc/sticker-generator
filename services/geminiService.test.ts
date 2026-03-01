@@ -40,22 +40,13 @@ describe('geminiService', () => {
   describe('generateSticker', () => {
     it('throws an error if the generation finishes with SAFETY reason', async () => {
       // Setup the mock to return a safety response
-      const mockGenerateContent = vi.fn().mockResolvedValue({
+      mockGenerateContent.mockResolvedValue({
         candidates: [
           {
             finishReason: 'SAFETY',
             content: { parts: [] },
           },
         ],
-      });
-
-      // @ts-ignore
-      vi.mocked(GoogleGenAI).mockImplementation(function() {
-        return {
-          models: {
-            generateContent: mockGenerateContent,
-          },
-        };
       });
 
       const fakeImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -70,6 +61,8 @@ describe('geminiService', () => {
 
       await expect(generateSticker(fakeImageBase64, fakeStyle)).rejects.toThrow(/^error_safety$/);
     });
+  });
+
   it('generateSticker throws error if API key is missing', async () => {
     delete process.env.API_KEY;
     await expect(generateSticker('base64data', STYLES[0])).rejects.toThrow('API Key is missing');

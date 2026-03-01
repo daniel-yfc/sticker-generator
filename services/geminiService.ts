@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { StyleOption } from "../types";
+import { logger } from "../utils/logger";
 
 /**
  * Helper to race a promise against a timeout
@@ -86,7 +87,7 @@ export const generateSticker = async (
     const candidate = response.candidates[0];
     
     if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-      console.error("Gemini Generation Failed. Finish Reason:", candidate.finishReason);
+      logger.error("Gemini Generation Failed. Finish Reason:", candidate.finishReason);
       if (candidate.finishReason === 'SAFETY') {
         throw new Error("error_safety");
       }
@@ -108,7 +109,7 @@ export const generateSticker = async (
     throw new Error("error_no_image");
 
   } catch (error: any) {
-    console.error("Gemini API Error details:", error);
+    logger.error("Gemini API Error details:", error);
     const msg = error.message || "error_process";
     throw new Error(msg);
   }
