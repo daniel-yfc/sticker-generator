@@ -22,12 +22,12 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ imageUrl, style, onReset,
   };
 
   const handleMagicWand = async () => {
-    setIsProcessing(true);
     try {
-      const newUrl = await applyMagicWand(imageUrl);
+      setIsProcessing(true);
+      const newUrl = await removeBackgroundMagicWand(imageUrl);
       onImageUpdate(newUrl);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error("Failed to apply magic wand:", error);
     } finally {
       setIsProcessing(false);
     }
