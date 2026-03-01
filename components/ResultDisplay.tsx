@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Download, RefreshCcw, Check, Wand2, Repeat } from 'lucide-react';
 import { StyleOption, StyleTranslation } from '../types';
 import { downloadImage } from '../utils/download';
-import { applyMagicWand } from '../utils/imageUtils';
+import { removeBackgroundMagicWand } from '../utils/imageUtils';
 
 interface ResultDisplayProps {
   imageUrl: string;
@@ -10,7 +10,7 @@ interface ResultDisplayProps {
   onReset: () => void;
   onReuse: () => void;
   onImageUpdate: (newImage: string) => void;
-  t: (key: string) => any;
+  t: (key: string) => string;
   stylesTranslation: Record<number, StyleTranslation>;
 }
 
@@ -26,8 +26,8 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ imageUrl, style, onReset,
       setIsProcessing(true);
       const newUrl = await removeBackgroundMagicWand(imageUrl);
       onImageUpdate(newUrl);
-    } catch (error) {
-      console.error("Failed to apply magic wand:", error);
+    } catch (error: unknown) {
+      console.error("Failed to apply magic wand:", error instanceof Error ? error.message : error);
     } finally {
       setIsProcessing(false);
     }

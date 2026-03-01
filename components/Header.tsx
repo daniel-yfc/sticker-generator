@@ -7,7 +7,7 @@ interface HeaderProps {
   onViewChange: (view: ViewMode) => void;
   currentLang: Language;
   onLangChange: (lang: Language) => void;
-  t: (key: string) => any;
+  t: (key: string) => string;
 }
 
 const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, currentLang, onLangChange, t }) => {

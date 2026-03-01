@@ -8,7 +8,7 @@ interface StyleSelectorProps {
   selectedStyle: StyleOption;
   onSelect: (style: StyleOption) => void;
   disabled: boolean;
-  t: (key: string) => any;
+  t: (key: string) => string;
   stylesTranslation: Record<number, StyleTranslation>;
   mode?: 'grid' | 'sidebar';
 }
@@ -233,4 +233,4 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, 
   );
 };
 
-export default StyleSelector; // Removed memo at top level, added internally
+export default memo(StyleSelector);

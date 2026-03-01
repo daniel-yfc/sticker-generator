@@ -36,7 +36,7 @@ export const removeBackgroundMagicWand = (imageUrl: string): Promise<string> => 
         ctx.putImageData(imageData, 0, 0);
         const newUrl = canvas.toDataURL('image/png');
         resolve(newUrl);
-      } catch (error) {
+      } catch (error: unknown) {
         reject(error);
       }
     };

@@ -8,8 +8,8 @@ interface StickerSetViewProps {
   stickers: string[];
   style: StyleOption;
   onReset: () => void;
-  t: (key: string) => any;
-  stylesTranslation: any;
+  t: (key: string) => string;
+  stylesTranslation: Record<number, { name: string, features: string }>;
 }
 
 const StickerSetView: React.FC<StickerSetViewProps> = ({ stickers, style, onReset, t, stylesTranslation }) => {

@@ -4,7 +4,7 @@ const isDev = () => {
     if (import.meta.env && import.meta.env.DEV) {
       return true;
     }
-  } catch (e) {
+  } catch (error: unknown) {
     // ignore
   }
   return process.env.NODE_ENV !== 'production';

@@ -5,7 +5,7 @@ interface ImageEditorProps {
   imageSrc: string;
   onConfirm: (processedImage: string) => void;
   onCancel: () => void;
-  t: (key: string) => any;
+  t: (key: string) => string;
 }
 
 const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel, t }) => {

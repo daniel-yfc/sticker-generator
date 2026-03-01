@@ -1,19 +1,25 @@
 import React from 'react';
 import { UploadCloud, Edit, RefreshCw } from 'lucide-react';
+import { MAX_FILE_SIZE } from '../constants';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
   currentPreview?: string;
   onEditClick?: () => void;
   disabled: boolean;
-  t: (key: string) => any;
+  t: (key: string) => string;
   mode?: 'hero' | 'compact';
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, currentPreview, onEditClick, disabled, t, mode = 'hero' }) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
-      onFileSelect(event.target.files[0]);
+      const file = event.target.files[0];
+      if (file.size > MAX_FILE_SIZE) {
+        alert(t('error_upload') + ': File size exceeds 10MB limit.');
+        return;
+      }
+      onFileSelect(file);
     }
   };
 
