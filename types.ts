@@ -26,12 +26,6 @@ export enum AppStatus {
   ERROR = 'error',
 }
 
-export interface StickerGenerationResult {
-  imageUrl: string;
-  isValid: boolean;
-  errors?: string[];
-}
-
 export type Language = 'zh-TW' | 'en' | 'ja';
 export type ViewMode = 'create' | 'gallery' | 'history';
 
@@ -47,4 +41,5 @@ export interface StickerRecord {
   imageUrl: string;
   styleId: number;
   timestamp: number;
+  sourceImageId?: string;
 }
