@@ -112,9 +112,9 @@ export const generateSticker = async (
     
     throw new Error("error_no_image");
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Gemini API Error details:", error);
-    const msg = error.message || "error_process";
+    const msg = error instanceof Error ? error.message : "error_process";
     throw new Error(msg);
   }
 };
