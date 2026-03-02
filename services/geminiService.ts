@@ -116,6 +116,29 @@ export const generateSticker = async (
 };
 
 /**
+ * Executes a mapping function over an array with a concurrency limit.
+ */
+async function throttledMap<T, U>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<U>
+): Promise<U[]> {
+  const results: U[] = new Array(items.length);
+  let index = 0;
+
+  const worker = async () => {
+    while (index < items.length) {
+      const currentIndex = index++;
+      results[currentIndex] = await fn(items[currentIndex]);
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
+/**
  * Generates a batch of variations based on a source image and style
  */
 export const generateStickerSet = async (
@@ -123,7 +146,8 @@ export const generateStickerSet = async (
   style: StyleOption,
   variations: string[]
 ): Promise<string[]> => {
-  // Call generation in parallel for faster results
-  const promises = variations.map(v => generateSticker(sourceImageBase64, style, v));
-  return Promise.all(promises);
+  // Call generation in parallel with a concurrency limit to avoid API spamming
+  return throttledMap(variations, 2, (v) =>
+    generateSticker(sourceImageBase64, style, v)
+  );
 };
