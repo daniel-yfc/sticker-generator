@@ -5,7 +5,17 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    setupFiles: './vitest.setup.ts',
+    setupFiles: ['./vitest.setup.ts'],
     globals: true,
+    server: {
+      deps: {
+        inline: ['vitest-canvas-mock']
+      }
+    },
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
+    }
   },
 });
