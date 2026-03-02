@@ -75,15 +75,15 @@ describe('StickerHistory', () => {
     expect(mockOnDelete).toHaveBeenCalledWith('1');
   });
 
-  it('renders correct download link attributes', () => {
+  it('renders correct download button attributes', () => {
     render(<StickerHistory history={mockHistory} onDelete={vi.fn()} t={mockT} stylesTranslation={mockStylesTranslation} />);
 
-    const downloadLinks = screen.getAllByTitle('Download');
-    expect(downloadLinks).toHaveLength(2);
-    expect(downloadLinks[0]).toHaveAttribute('href', 'http://example.com/image1.png');
-    expect(downloadLinks[0]).toHaveAttribute('download', 'sticker-1.png');
+    const downloadButtons = screen.getAllByTitle('Download');
+    expect(downloadButtons).toHaveLength(2);
+    expect(downloadButtons[0]).toHaveAttribute('data-url', 'http://example.com/image1.png');
+    expect(downloadButtons[0]).toHaveAttribute('data-id', '1');
 
-    expect(downloadLinks[1]).toHaveAttribute('href', 'http://example.com/image2.png');
-    expect(downloadLinks[1]).toHaveAttribute('download', 'sticker-2.png');
+    expect(downloadButtons[1]).toHaveAttribute('data-url', 'http://example.com/image2.png');
+    expect(downloadButtons[1]).toHaveAttribute('data-id', '2');
   });
 });
