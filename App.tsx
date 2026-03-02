@@ -42,7 +42,10 @@ const App: React.FC = () => {
 
   const t = (key: string) => {
     const translation = TRANSLATIONS[language];
-    return translation[key as keyof typeof translation] as string || key;
+    if (key in translation) {
+      return translation[key as keyof typeof translation] as string;
+    }
+    return key;
   };
 
   useEffect(() => {
