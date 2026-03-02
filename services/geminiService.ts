@@ -20,7 +20,7 @@ function validateApiKey(): string {
   
   if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
     logger.error('API Key validation failed');
-    throw new Error('API Key is missing or invalid. Please check your .env configuration.');
+    throw new Error('API Key is missing. Please check your configuration.');
   }
   
   return apiKey;
