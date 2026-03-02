@@ -1,5 +1,7 @@
 
-import { StyleOption, GalleryItem, Language } from './types';
+import { StyleOption, GalleryItem, Language, TranslationContent } from './types';
+
+export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export const STYLES: StyleOption[] = [
   {
@@ -148,7 +150,7 @@ export const STYLES: StyleOption[] = [
   }
 ];
 
-export const TRANSLATIONS = {
+export const TRANSLATIONS: Record<Language, TranslationContent> = {
   'zh-TW': {
     header_title: "Sticker Maker Pro",
     header_subtitle: "AI 貼圖製作工具",

@@ -13,6 +13,7 @@ import { STYLES, TRANSLATIONS } from './constants';
 import { AppStatus, StyleOption, Language, ViewMode, StickerRecord } from './types';
 import { generateSticker, generateStickerSet } from './services/geminiService';
 import { AlertCircle, ArrowRight, Layers, Sticker, RefreshCw, Sparkles } from 'lucide-react';
+import { logger } from './utils/logger';
 
 const HISTORY_KEY = 'sticker_maker_history_v2';
 
@@ -40,7 +41,8 @@ const App: React.FC = () => {
   const isProcessing = status === AppStatus.PROCESSING || status === AppStatus.SET_PROCESSING;
 
   const t = (key: string) => {
-    return (TRANSLATIONS[language] as any)[key] || key;
+    const translation = TRANSLATIONS[language];
+    return translation[key as keyof typeof translation] as string || key;
   };
 
   useEffect(() => {
@@ -48,8 +50,8 @@ const App: React.FC = () => {
     if (saved) {
       try {
         setHistory(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse history", e);
+      } catch (error: unknown) {
+        logger.error("Failed to parse history", error instanceof Error ? error.message : error);
       }
     }
   }, []);
@@ -69,7 +71,14 @@ const App: React.FC = () => {
   };
 
   const deleteFromHistory = (id: string) => {
-    setHistory(prev => prev.filter(item => item.id !== id));
+    setHistory(prev => {
+      const index = prev.findIndex(item => item.id === id);
+      if (index === -1) return prev;
+
+      const next = [...prev];
+      next.splice(index, 1);
+      return next;
+    });
   };
 
   const handleStyleSelect = useCallback((style: StyleOption) => {
@@ -92,8 +101,8 @@ const App: React.FC = () => {
             setStatus(AppStatus.EDITING);
           };
           reader.readAsDataURL(blob);
-        } catch (err) {
-          console.error("Failed to import gallery image", err);
+        } catch (error: unknown) {
+          logger.error("Failed to import gallery image", error instanceof Error ? error.message : error);
           setStatus(AppStatus.ERROR);
           setErrorMessage(t('error_upload'));
         }
@@ -157,9 +166,13 @@ const App: React.FC = () => {
       };
       img.src = resultImage;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(uiTimeout);
-      setErrorMessage(t(error.message));
+      if (error instanceof Error) {
+        setErrorMessage(t(error.message));
+      } else {
+        setErrorMessage(t('error_process'));
+      }
       setStatus(AppStatus.ERROR);
     }
   };
@@ -183,8 +196,12 @@ const App: React.FC = () => {
       results.forEach(imgUrl => addToHistory(imgUrl, selectedStyle.id));
       setGeneratedSet(results);
       setStatus(AppStatus.SET_SUCCESS);
-    } catch (error: any) {
-      setErrorMessage(t(error.message));
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setErrorMessage(t(error.message));
+      } else {
+        setErrorMessage(t('error_process'));
+      }
       setStatus(AppStatus.ERROR);
     }
   };
@@ -235,7 +252,7 @@ const App: React.FC = () => {
                         onSelect={handleStyleSelect} 
                         disabled={isProcessing}
                         t={t}
-                        stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                        stylesTranslation={TRANSLATIONS[language].styles}
                         mode="sidebar"
                       />
                    </div>
@@ -336,7 +353,7 @@ const App: React.FC = () => {
                             onReuse={handleReuse}
                             onImageUpdate={handleImageUpdate}
                             t={t}
-                            stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                            stylesTranslation={TRANSLATIONS[language].styles}
                          />
                       )}
 
@@ -346,7 +363,7 @@ const App: React.FC = () => {
                             style={selectedStyle}
                             onReset={handleReset}
                             t={t}
-                            stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                            stylesTranslation={TRANSLATIONS[language].styles}
                          />
                       )}
 
@@ -401,7 +418,7 @@ const App: React.FC = () => {
                        {STYLES.slice(0, 4).map(style => (
                           <div key={style.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
                              <div className={`w-10 h-10 rounded-lg ${style.previewColor}`}></div>
-                             <div className="text-xs font-bold text-gray-700">{(TRANSLATIONS[language] as any).styles[style.id].name}</div>
+                             <div className="text-xs font-bold text-gray-700">{TRANSLATIONS[language].styles[style.id].name}</div>
                           </div>
                        ))}
                     </div>
@@ -414,7 +431,7 @@ const App: React.FC = () => {
               <Gallery 
                 onSelectStyle={handleGallerySelect} 
                 t={t}
-                stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                stylesTranslation={TRANSLATIONS[language].styles}
               />
             )}
 
@@ -440,7 +457,7 @@ const App: React.FC = () => {
                   history={history} 
                   onDelete={deleteFromHistory} 
                   t={t}
-                  stylesTranslation={(TRANSLATIONS[language] as any).styles}
+                  stylesTranslation={TRANSLATIONS[language].styles}
                 />
               </div>
             )}

@@ -2,13 +2,14 @@
 import React from 'react';
 import { Download, RefreshCcw, Check } from 'lucide-react';
 import { StyleOption } from '../types';
+import { downloadImage } from '../utils/download';
 
 interface StickerSetViewProps {
   stickers: string[];
   style: StyleOption;
   onReset: () => void;
-  t: (key: string) => any;
-  stylesTranslation: any;
+  t: (key: string) => string;
+  stylesTranslation: Record<number, { name: string, features: string }>;
 }
 
 const StickerSetView: React.FC<StickerSetViewProps> = ({ stickers, style, onReset, t, stylesTranslation }) => {
@@ -16,12 +17,7 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({ stickers, style, onRese
 
   const handleDownloadAll = () => {
     stickers.forEach((url, index) => {
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `sticker-pro-set-${style.id}-${index}-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadImage(url, `sticker-pro-set-${style.id}-${index}-${Date.now()}.png`);
     });
   };
 
@@ -66,14 +62,13 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({ stickers, style, onRese
                  <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-full shadow-sm">
                    <Check className="w-4 h-4 text-green-600" />
                  </div>
-                 <a 
-                   href={url} 
-                   download={`sticker-variation-${idx}.png`}
+                 <button
+                   onClick={() => downloadImage(url, `sticker-variation-${idx}.png`)}
                    className="absolute bottom-2 right-2 bg-indigo-600 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-indigo-700"
                    title={t('btn_download')}
                  >
                    <Download className="w-4 h-4" />
-                 </a>
+                 </button>
                </div>
              ))}
            </div>
