@@ -44,7 +44,7 @@ describe('geminiService', () => {
         ]
       });
 
-      const fakeImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      const fakeImageBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
       const fakeStyle = {
         id: 1,
         style: 'Test Style',
@@ -59,9 +59,20 @@ describe('geminiService', () => {
         .toThrow('error_safety');
     });
 
-    it('generateSticker throws error if API key is missing', async () => {
+    it('generateSticker throws error if API key is missing, empty, or whitespace', async () => {
+      const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
+
+      // Test undefined API key
       delete process.env.API_KEY;
-      await expect(generateSticker('base64data', STYLES[0])).rejects.toThrow('API Key is missing');
+      await expect(generateSticker(validBase64, STYLES[0])).rejects.toThrow('API Key is missing. Please check your configuration.');
+
+      // Test empty string API key
+      process.env.API_KEY = '';
+      await expect(generateSticker(validBase64, STYLES[0])).rejects.toThrow('API Key is missing. Please check your configuration.');
+
+      // Test whitespace API key
+      process.env.API_KEY = '   ';
+      await expect(generateSticker(validBase64, STYLES[0])).rejects.toThrow('API Key is missing. Please check your configuration.');
     });
 
     it('generateSticker calls generateContent and returns image data', async () => {
@@ -83,7 +94,8 @@ describe('geminiService', () => {
       };
       mockGenerateContent.mockResolvedValue(mockResponse);
 
-      const result = await generateSticker('data:image/png;base64,source-image', STYLES[0]);
+      const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
+      const result = await generateSticker(validBase64, STYLES[0]);
 
       expect(mockGenerateContent).toHaveBeenCalled();
       expect(result).toBe('data:image/png;base64,generated-image-base64');
@@ -108,7 +120,8 @@ describe('geminiService', () => {
       };
       mockGenerateContent.mockResolvedValue(mockResponse);
 
-      const result = await generateSticker('data:application/pdf;base64,some-pdf-data', STYLES[0]);
+      const validData = 'A'.repeat(100);
+      const result = await generateSticker(`data:application/pdf;base64,${validData}`, STYLES[0]);
 
       // Check that it was called with 'image/jpeg' and the right data
       expect(mockGenerateContent).toHaveBeenCalledWith(
@@ -118,7 +131,7 @@ describe('geminiService', () => {
               expect.objectContaining({
                 inlineData: {
                   mimeType: 'image/jpeg',
-                  data: 'some-pdf-data', // The updated replace regex will extract the base64 part
+                  data: validData, // The updated replace regex will extract the base64 part
                 }
               })
             ])
@@ -147,7 +160,8 @@ describe('geminiService', () => {
       };
       mockGenerateContent.mockResolvedValue(mockResponse);
 
-      const result = await generateSticker('just-a-base64-string', STYLES[0]);
+      const validData = 'A'.repeat(100);
+      const result = await generateSticker(validData, STYLES[0]);
 
       // Check that it was called with 'image/jpeg' and the right data
       expect(mockGenerateContent).toHaveBeenCalledWith(
@@ -157,7 +171,7 @@ describe('geminiService', () => {
               expect.objectContaining({
                 inlineData: {
                   mimeType: 'image/jpeg',
-                  data: 'just-a-base64-string',
+                  data: validData,
                 }
               })
             ])
@@ -177,7 +191,8 @@ describe('geminiService', () => {
       };
       mockGenerateContent.mockResolvedValue(mockResponse);
 
-      await expect(generateSticker('data:image/png;base64,source-image', STYLES[0])).rejects.toThrow('error_safety');
+      const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
+      await expect(generateSticker(validBase64, STYLES[0])).rejects.toThrow('error_safety');
     });
   });
 
@@ -192,7 +207,8 @@ describe('geminiService', () => {
         ]
       });
       const variations = ['var1', 'var2'];
-      const results = await generateStickerSet('data:image/png;base64,source-image', STYLES[0], variations);
+      const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
+      const results = await generateStickerSet(validBase64, STYLES[0], variations);
 
       expect(results).toHaveLength(2);
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
