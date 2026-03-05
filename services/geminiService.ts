@@ -79,6 +79,92 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, message: string): Promi
   ]);
 };
 
+
+
+/**
+ * Checks if sticker generation is allowed by rate limit
+ * @throws Error if rate limit is exceeded
+ */
+function checkRateLimit(): void {
+  const rateLimitResult = stickerGenerationLimiter.check('generate');
+  if (!rateLimitResult.allowed) {
+    const waitTime = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
+    throw new Error(
+      `Rate limit exceeded. Please wait ${waitTime} seconds before generating more stickers.`
+    );
+  }
+}
+
+
+/**
+ * Builds the text prompt for the sticker generation API
+ * @param style - Style configuration for the sticker
+ * @param variationPrompt - Optional prompt for variation
+ * @returns The final constructed prompt
+ */
+function buildStickerPrompt(style: StyleOption, variationPrompt?: string): string {
+  // Improved Prompt Engineering
+  // Focus on "Transformation" and "Artistic Medium" to avoid photorealism
+  const styleDescription = `${style.basePrompt} ${style.modifiers.person}`;
+
+  const basePrompt = `Generate a high-quality die-cut sticker of the person in the provided image.
+
+  ART STYLE: ${styleDescription}.
+
+  CRITICAL INSTRUCTIONS:
+  1. TRANSFORM the subject into a stylistic illustration matching the Art Style.
+  2. DO NOT produce a realistic photo. The result must look like a drawing, painting, or 3D render.
+  3. SIMPLIFY details to match the sticker aesthetic.
+  4. Add a thick, clean WHITE BORDER surrounding the subject (die-cut style).
+  5. Use a solid white background.
+  `;
+
+  const extraInstruction = variationPrompt
+    ? `\nExpression/Action Variation: ${variationPrompt}. Ensure the style remains consistent.`
+    : `\nExpression: Expressive and charismatic.`;
+
+  return basePrompt + extraInstruction;
+}
+
+
+/**
+ * Validates the API response and extracts the base64 image data
+ * @param response - The API response object
+ * @returns Base64 encoded PNG image
+ * @throws Error for various failure conditions
+ */
+function extractImageFromResponse(response: GenerateContentResponse): string {
+  if (!response.candidates || response.candidates.length === 0) {
+    throw new Error("error_safety");
+  }
+
+  const candidate = response.candidates[0];
+
+  if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+    logger.error("Gemini Generation Failed. Finish Reason:", candidate.finishReason);
+    if (candidate.finishReason === 'SAFETY') {
+      throw new Error("error_safety");
+    }
+    throw new Error(`error_process`);
+  }
+
+  const parts = candidate.content?.parts;
+
+  if (!parts) {
+    throw new Error("error_no_image");
+  }
+
+  for (const part of parts) {
+    if (part.inlineData && part.inlineData.data) {
+      logger.info('Sticker generated successfully');
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+
+  throw new Error("error_no_image");
+}
+
+
 /**
  * Generates a sticker from an image using Gemini AI
  * Includes rate limiting, validation, and comprehensive error handling
@@ -94,14 +180,7 @@ export const generateSticker = async (
   style: StyleOption,
   variationPrompt?: string
 ): Promise<string> => {
-  // Rate limiting check
-  const rateLimitResult = stickerGenerationLimiter.check('generate');
-  if (!rateLimitResult.allowed) {
-    const waitTime = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
-    throw new Error(
-      `Rate limit exceeded. Please wait ${waitTime} seconds before generating more stickers.`
-    );
-  }
+  checkRateLimit();
 
   // Validate API key
   const apiKey = validateApiKey();
@@ -111,27 +190,7 @@ export const generateSticker = async (
     // Validate and extract image data
     const { mimeType, base64Data } = validateAndExtractImageData(imageBase64);
     
-    // Improved Prompt Engineering
-    // Focus on "Transformation" and "Artistic Medium" to avoid photorealism
-    const styleDescription = `${style.basePrompt} ${style.modifiers.person}`;
-    
-    const basePrompt = `Generate a high-quality die-cut sticker of the person in the provided image.
-    
-    ART STYLE: ${styleDescription}.
-    
-    CRITICAL INSTRUCTIONS:
-    1. TRANSFORM the subject into a stylistic illustration matching the Art Style.
-    2. DO NOT produce a realistic photo. The result must look like a drawing, painting, or 3D render.
-    3. SIMPLIFY details to match the sticker aesthetic.
-    4. Add a thick, clean WHITE BORDER surrounding the subject (die-cut style).
-    5. Use a solid white background.
-    `;
-
-    const extraInstruction = variationPrompt 
-      ? `\nExpression/Action Variation: ${variationPrompt}. Ensure the style remains consistent.` 
-      : `\nExpression: Expressive and charismatic.`;
-
-    const finalPrompt = basePrompt + extraInstruction;
+    const finalPrompt = buildStickerPrompt(style, variationPrompt);
 
     logger.info('Generating sticker with style:', style.id);
 
@@ -159,34 +218,7 @@ export const generateSticker = async (
       "error_timeout"
     );
 
-    if (!response.candidates || response.candidates.length === 0) {
-      throw new Error("error_safety");
-    }
-
-    const candidate = response.candidates[0];
-    
-    if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-      logger.error("Gemini Generation Failed. Finish Reason:", candidate.finishReason);
-      if (candidate.finishReason === 'SAFETY') {
-        throw new Error("error_safety");
-      }
-      throw new Error(`error_process`);
-    }
-
-    const parts = candidate.content?.parts;
-    
-    if (!parts) {
-      throw new Error("error_no_image");
-    }
-
-    for (const part of parts) {
-      if (part.inlineData && part.inlineData.data) {
-        logger.info('Sticker generated successfully');
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
-    }
-    
-    throw new Error("error_no_image");
+    return extractImageFromResponse(response);
 
   } catch (error: unknown) {
     logger.error("Gemini API Error:", error);
