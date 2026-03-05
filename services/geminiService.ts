@@ -27,10 +27,16 @@ export const generateSticker = async (
   const ai = new GoogleGenAI({ apiKey });
 
   try {
-    // Extract MIME type and base64 data
-    const mimeMatch = imageBase64.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,/);
-    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-    const base64Data = imageBase64.replace(/^data:image\/(?:png|jpeg|jpg|webp);base64,/, "");
+    // Extract MIME type and base64 data securely
+    const dataUriRegex = /^data:(image\/(?:png|jpeg|jpg|webp));base64,([a-zA-Z0-9+/=]+)$/;
+    const mimeMatch = imageBase64.match(dataUriRegex);
+
+    if (!mimeMatch) {
+      throw new Error("Invalid image format or unsupported MIME type. Only PNG, JPEG, and WEBP are allowed.");
+    }
+
+    const mimeType = mimeMatch[1];
+    const base64Data = mimeMatch[2];
     
     // Improved Prompt Engineering v2
     // Focus on "Transformation" and "Artistic Medium" to avoid photorealism.
