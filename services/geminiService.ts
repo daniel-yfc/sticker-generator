@@ -1,8 +1,5 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { StyleOption } from "../types";
-
-const processEnvApiKey = process.env.API_KEY;
 
 /**
  * Helper to race a promise against a timeout
@@ -19,13 +16,16 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, message: string): Promi
 export const generateSticker = async (
   imageBase64: string,
   style: StyleOption,
-  variationPrompt?: string
+  variationPrompt?: string,
+  apiKey?: string
 ): Promise<string> => {
-  if (!processEnvApiKey) {
+  const activeApiKey = apiKey || process.env.API_KEY;
+
+  if (!activeApiKey) {
     throw new Error("API Key is missing. Please check your configuration.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: processEnvApiKey });
+  const ai = new GoogleGenAI({ apiKey: activeApiKey });
 
   try {
     // Extract MIME type and base64 data
@@ -121,9 +121,10 @@ export const generateSticker = async (
 export const generateStickerSet = async (
   sourceImageBase64: string,
   style: StyleOption,
-  variations: string[]
+  variations: string[],
+  apiKey?: string
 ): Promise<string[]> => {
   // Call generation in parallel for faster results
-  const promises = variations.map(v => generateSticker(sourceImageBase64, style, v));
+  const promises = variations.map(v => generateSticker(sourceImageBase64, style, v, apiKey));
   return Promise.all(promises);
 };

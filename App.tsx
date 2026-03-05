@@ -9,6 +9,7 @@ import Gallery from './components/Gallery';
 import StickerHistory from './components/StickerHistory';
 import ImageEditor from './components/ImageEditor';
 import StickerSetView from './components/StickerSetView';
+import ApiKeyModal from './components/ApiKeyModal';
 import { STYLES, TRANSLATIONS } from './constants';
 import { AppStatus, StyleOption, Language, ViewMode, StickerRecord } from './types';
 import { generateSticker, generateStickerSet } from './services/geminiService';
@@ -36,6 +37,15 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>('zh-TW');
   
   const [history, setHistory] = useState<StickerRecord[]>([]);
+  const [apiKey, setApiKey] = useState<string>('');
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem('gemini_api_key');
+    if (savedKey) {
+      setApiKey(savedKey);
+    }
+  }, []);
 
   const isProcessing = status === AppStatus.PROCESSING || status === AppStatus.SET_PROCESSING;
 
@@ -141,7 +151,13 @@ const App: React.FC = () => {
     }, 70000);
 
     try {
-      const resultImage = await generateSticker(processedImage, selectedStyle);
+
+      if (!process.env.API_KEY && !apiKey) {
+        setIsApiKeyModalOpen(true);
+        setStatus(AppStatus.READY);
+        return;
+      }
+      const resultImage = await generateSticker(processedImage, selectedStyle, undefined, apiKey);
       
       const img = new Image();
       img.onload = () => {
@@ -159,6 +175,9 @@ const App: React.FC = () => {
 
     } catch (error: any) {
       clearTimeout(uiTimeout);
+      if (error.message.includes('API Key is missing') || error.message.includes('API_KEY_INVALID')) {
+        setIsApiKeyModalOpen(true);
+      }
       setErrorMessage(t(error.message));
       setStatus(AppStatus.ERROR);
     }
@@ -179,11 +198,20 @@ const App: React.FC = () => {
     ];
 
     try {
-      const results = await generateStickerSet(processedImage, selectedStyle, variations);
+
+      if (!process.env.API_KEY && !apiKey) {
+        setIsApiKeyModalOpen(true);
+        setStatus(AppStatus.READY);
+        return;
+      }
+      const results = await generateStickerSet(processedImage, selectedStyle, variations, apiKey);
       results.forEach(imgUrl => addToHistory(imgUrl, selectedStyle.id));
       setGeneratedSet(results);
       setStatus(AppStatus.SET_SUCCESS);
     } catch (error: any) {
+      if (error.message.includes('API Key is missing') || error.message.includes('API_KEY_INVALID')) {
+        setIsApiKeyModalOpen(true);
+      }
       setErrorMessage(t(error.message));
       setStatus(AppStatus.ERROR);
     }
@@ -196,6 +224,12 @@ const App: React.FC = () => {
     setErrorMessage(null);
     setRawImage(null);
     setProcessedImage(null);
+  };
+
+  const handleSaveApiKey = (key: string) => {
+    localStorage.setItem('gemini_api_key', key);
+    setApiKey(key);
+    setIsApiKeyModalOpen(false);
   };
 
   const handleReuse = () => {
@@ -221,6 +255,12 @@ const App: React.FC = () => {
       />
 
       <main className="flex-grow max-w-5xl mx-auto w-full px-4 py-8">
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onSave={handleSaveApiKey}
+        onClose={() => setIsApiKeyModalOpen(false)}
+        t={t}
+      />
                 {/* --- WORKSPACE LAYOUT (Active State) --- */}
             {(status !== AppStatus.IDLE && view === 'create') && (
               <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-140px)] min-h-[600px]">
