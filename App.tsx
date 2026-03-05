@@ -12,7 +12,7 @@ import StickerSetView from './components/StickerSetView';
 import { STYLES, TRANSLATIONS } from './constants';
 import { AppStatus, StyleOption, Language, ViewMode, StickerRecord } from './types';
 import { generateSticker, generateStickerSet } from './services/geminiService';
-import { AlertCircle, ArrowRight, Layers, Sticker, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertCircle, Layers, Sticker, RefreshCw, Sparkles } from 'lucide-react';
 import { logger } from './utils/logger';
 
 const HISTORY_KEY = 'sticker_maker_history_v2';
