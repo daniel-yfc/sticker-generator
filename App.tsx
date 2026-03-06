@@ -14,6 +14,7 @@ import { AppStatus, StyleOption, Language, ViewMode, StickerRecord } from './typ
 import { generateSticker, generateStickerSet } from './services/geminiService';
 import { AlertCircle, ArrowRight, Layers, Sticker, RefreshCw, Sparkles } from 'lucide-react';
 import { logger } from './utils/logger';
+import { validateHistory } from './utils/validation';
 
 const HISTORY_KEY = 'sticker_maker_history_v2';
 
@@ -52,7 +53,9 @@ const App: React.FC = () => {
     const saved = localStorage.getItem(HISTORY_KEY);
     if (saved) {
       try {
-        setHistory(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        const validated = validateHistory(parsed);
+        setHistory(validated);
       } catch (error: unknown) {
         logger.error("Failed to parse history", error instanceof Error ? error.message : error);
       }

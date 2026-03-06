@@ -4,6 +4,7 @@
  */
 
 import { logger } from './logger';
+import { StickerRecord } from '../types';
 
 // Security constants
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -136,4 +137,61 @@ export function sanitizeErrorMessage(message: string): string {
     .replace(/javascript:/gi, '')
     .replace(/on\w+\s*=/gi, '')
     .trim();
+}
+
+/**
+ * Validates if an object conforms to the StickerRecord interface
+ * Checks for required fields and basic type safety
+ *
+ * @param item - Object to validate
+ * @returns boolean indicating if the object is a valid StickerRecord
+ */
+export function isValidStickerRecord(item: any): item is StickerRecord {
+  if (!item || typeof item !== 'object') return false;
+
+  const { id, imageUrl, styleId, timestamp, sourceImageId } = item;
+
+  // Basic type checks
+  if (typeof id !== 'string' || id.length === 0) return false;
+  if (typeof imageUrl !== 'string' || imageUrl.length === 0) return false;
+  if (typeof styleId !== 'number') return false;
+  if (typeof timestamp !== 'number') return false;
+  if (sourceImageId !== undefined && typeof sourceImageId !== 'string') return false;
+
+  // URL Security Check: Prevent XSS via javascript: or other dangerous protocols
+  try {
+    // If it's a data URL, verify it's an image
+    if (imageUrl.startsWith('data:')) {
+      return /^data:image\/(png|jpeg|jpg|webp);base64,/.test(imageUrl);
+    }
+
+    // Otherwise, check for safe web protocols
+    const url = new URL(imageUrl);
+    return ['http:', 'https:'].includes(url.protocol);
+  } catch (e) {
+    // If it's not a valid URL format and not a data URL, reject it
+    return false;
+  }
+}
+
+/**
+ * Validates and filters history data from localStorage
+ * Ensures only valid StickerRecord items are kept
+ *
+ * @param data - Parsed JSON data from localStorage
+ * @returns Array of valid StickerRecord objects
+ */
+export function validateHistory(data: any): StickerRecord[] {
+  if (!Array.isArray(data)) {
+    logger.warn('History data is not an array, returning empty history');
+    return [];
+  }
+
+  const validHistory = data.filter(isValidStickerRecord);
+
+  if (validHistory.length !== data.length) {
+    logger.warn(`Filtered out ${data.length - validHistory.length} invalid history items`);
+  }
+
+  return validHistory;
 }
