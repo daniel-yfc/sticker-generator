@@ -1,87 +1,12 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { StyleOption } from "../types";
 import { logger } from "../utils/logger";
 import { stickerGenerationLimiter } from "../utils/rateLimit";
 import { sanitizeErrorMessage } from "../utils/validation";
 
-// Performance and security constants
-const API_TIMEOUT_MS = 60000; // 60 seconds
-const MAX_RETRIES = 1;
 const BATCH_CONCURRENCY = 2;
 
 /**
- * Validates API key at runtime
- * Provides clear error messaging for missing configuration
- * 
- * @throws Error if API key is missing or invalid
- */
-function validateApiKey(): string {
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
-    logger.error('API Key validation failed');
-    throw new Error('API Key is missing. Please check your configuration.');
-  }
-  
-  return apiKey;
-}
-
-/**
- * Validates base64 image data format
- * Prevents invalid data from being sent to API
- * 
- * @param imageBase64 - Base64 encoded image string
- * @returns Validated MIME type and base64 data
- */
-function validateAndExtractImageData(imageBase64: string): { mimeType: string; base64Data: string } {
-  if (!imageBase64 || typeof imageBase64 !== 'string') {
-    throw new Error('Invalid image data');
-  }
-
-  // Extract MIME type and base64 data
-  const mimeMatch = imageBase64.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,/);
-  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-
-  // For unsupported MIME types or invalid formats, attempt generic extraction
-  let base64Data = imageBase64.replace(/^data:image\/(?:png|jpeg|jpg|webp);base64,/, "");
-  if (base64Data === imageBase64 && imageBase64.startsWith("data:")) {
-    base64Data = imageBase64.replace(/^data:[^;]+;base64,/, "");
-  }
-
-  // Validate base64 data exists and looks valid
-  if (!base64Data || base64Data.length < 100) {
-    throw new Error('Invalid or corrupted image data');
-  }
-
-  // Basic base64 format validation
-  if (!/^[A-Za-z0-9+/]+=*$/.test(base64Data.substring(0, 100))) {
-    throw new Error('Invalid base64 format');
-  }
-
-  return { mimeType, base64Data };
-}
-
-/**
- * Helper to race a promise against a timeout
- * Prevents indefinite hanging on API calls
- * 
- * @param promise - Promise to execute
- * @param ms - Timeout in milliseconds
- * @param message - Error message for timeout
- * @returns Promise that resolves with result or rejects on timeout
- */
-const withTimeout = <T>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(message)), ms)
-    )
-  ]);
-};
-
-/**
- * Generates a sticker from an image using Gemini AI
- * Includes rate limiting, validation, and comprehensive error handling
+ * Generates a sticker from an image using the backend API
  * 
  * @param imageBase64 - Base64 encoded image string
  * @param style - Style configuration for the sticker
@@ -103,93 +28,34 @@ export const generateSticker = async (
     );
   }
 
-  // Validate API key
-  const apiKey = validateApiKey();
-  const ai = new GoogleGenAI({ apiKey });
-
   try {
-    // Validate and extract image data
-    const { mimeType, base64Data } = validateAndExtractImageData(imageBase64);
-    
-    // Improved Prompt Engineering
-    // Focus on "Transformation" and "Artistic Medium" to avoid photorealism
-    const styleDescription = `${style.basePrompt} ${style.modifiers.person}`;
-    
-    const basePrompt = `Generate a high-quality die-cut sticker of the person in the provided image.
-    
-    ART STYLE: ${styleDescription}.
-    
-    CRITICAL INSTRUCTIONS:
-    1. TRANSFORM the subject into a stylistic illustration matching the Art Style.
-    2. DO NOT produce a realistic photo. The result must look like a drawing, painting, or 3D render.
-    3. SIMPLIFY details to match the sticker aesthetic.
-    4. Add a thick, clean WHITE BORDER surrounding the subject (die-cut style).
-    5. Use a solid white background.
-    `;
-
-    const extraInstruction = variationPrompt 
-      ? `\nExpression/Action Variation: ${variationPrompt}. Ensure the style remains consistent.` 
-      : `\nExpression: Expressive and charismatic.`;
-
-    const finalPrompt = basePrompt + extraInstruction;
-
-    logger.info('Generating sticker with style:', style.id);
-
-    const response: GenerateContentResponse = await withTimeout(
-      ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            { text: finalPrompt },
-            {
-              inlineData: {
-                mimeType: mimeType,
-                data: base64Data
-              }
-            }
-          ]
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: "1:1"
-          }
-        }
+    const response = await fetch('/api/generate-sticker', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        imageBase64,
+        style,
+        variationPrompt,
       }),
-      API_TIMEOUT_MS,
-      "error_timeout"
-    );
+    });
 
-    if (!response.candidates || response.candidates.length === 0) {
-      throw new Error("error_safety");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'error_process');
     }
 
-    const candidate = response.candidates[0];
-    
-    if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-      logger.error("Gemini Generation Failed. Finish Reason:", candidate.finishReason);
-      if (candidate.finishReason === 'SAFETY') {
-        throw new Error("error_safety");
-      }
-      throw new Error(`error_process`);
+    if (!data.image) {
+      throw new Error('error_no_image');
     }
 
-    const parts = candidate.content?.parts;
-    
-    if (!parts) {
-      throw new Error("error_no_image");
-    }
-
-    for (const part of parts) {
-      if (part.inlineData && part.inlineData.data) {
-        logger.info('Sticker generated successfully');
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
-    }
-    
-    throw new Error("error_no_image");
+    logger.info('Sticker generated successfully via backend');
+    return data.image;
 
   } catch (error: unknown) {
-    logger.error("Gemini API Error:", error);
+    logger.error("Backend API Error:", error);
     
     const errorMessage = error instanceof Error ? error.message : "error_process";
     const sanitizedMessage = sanitizeErrorMessage(errorMessage);
@@ -250,7 +116,7 @@ export const generateStickerSet = async (
   style: StyleOption,
   variations: string[]
 ): Promise<string[]> => {
-  logger.info(`Generating sticker set with ${variations.length} variations`);
+  logger.info(`Generating sticker set with ${variations.length} variations via backend`);
   
   return throttledMap(
     variations, 
