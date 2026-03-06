@@ -25,11 +25,6 @@ const N = 50000;
 const history = generateHistory(N);
 const targetId = `id-${Math.floor(N / 2)}`;
 
-// Original implementation
-const deleteFromHistoryV1 = (id: string, currentHistory: StickerRecord[]) => {
-  return currentHistory.filter(item => item.id !== id);
-};
-
 // Optimized implementation - using findIndex and splice
 const deleteFromHistoryV2 = (id: string, currentHistory: StickerRecord[]) => {
   const index = currentHistory.findIndex(item => item.id === id);
@@ -40,14 +35,6 @@ const deleteFromHistoryV2 = (id: string, currentHistory: StickerRecord[]) => {
   }
   return currentHistory;
 };
-
-// Benchmark original
-const start1 = performance.now();
-for (let i = 0; i < 1000; i++) {
-  deleteFromHistoryV1(targetId, history);
-}
-const end1 = performance.now();
-console.log(`Original implementation (filter): ${end1 - start1} ms`);
 
 // Benchmark optimized
 const start2 = performance.now();
