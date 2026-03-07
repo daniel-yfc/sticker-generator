@@ -22,14 +22,33 @@ export const removeBackgroundMagicWand = (imageUrl: string): Promise<string> => 
         // For stickers, usually the background is white. Let's make pure white transparent.
         // A robust flood fill is better, but expensive. Let's try color keying near white.
 
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
+        // Optimization: Use Uint32Array for faster iteration
+        const data32 = new Uint32Array(data.buffer);
+        const isLittleEndian = new Uint8Array(new Uint32Array([0x11223344]).buffer)[0] === 0x44;
 
-          // Check for white/near-white
-          if (r > 240 && g > 240 && b > 240) {
-            data[i + 3] = 0; // Alpha 0
+        if (isLittleEndian) {
+          for (let i = 0; i < data32.length; i++) {
+            const pixel = data32[i];
+            const r = pixel & 0xFF;
+            const g = (pixel >> 8) & 0xFF;
+            const b = (pixel >> 16) & 0xFF;
+
+            // Check for white/near-white
+            if (r > 240 && g > 240 && b > 240) {
+              data32[i] = pixel & 0x00FFFFFF; // Alpha 0 (top byte to 00)
+            }
+          }
+        } else {
+          for (let i = 0; i < data32.length; i++) {
+            const pixel = data32[i];
+            const r = (pixel >>> 24) & 0xFF;
+            const g = (pixel >>> 16) & 0xFF;
+            const b = (pixel >>> 8) & 0xFF;
+
+            // Check for white/near-white
+            if (r > 240 && g > 240 && b > 240) {
+              data32[i] = pixel & 0xFFFFFF00; // Alpha 0 (bottom byte to 00)
+            }
           }
         }
 

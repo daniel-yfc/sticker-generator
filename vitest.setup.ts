@@ -40,45 +40,29 @@ class MockImage {
 global.Image = MockImage as any;
 
 // Mock Canvas API manually
-HTMLCanvasElement.prototype.getContext = vi.fn((contextId) => {
-  if (contextId === '2d') {
-    return {
-      fillStyle: '',
-      fillRect: vi.fn(),
-      clearRect: vi.fn(),
-      getImageData: vi.fn((x, y, w, h) => {
-        // Return a mock ImageData object
-        return {
-          data: new Uint8ClampedArray(w * h * 4).map((_, i) => i % 4 === 3 ? 0 : 255), // Some transparent pixels
-          width: w,
-          height: h,
-        };
-      }),
-      putImageData: vi.fn(),
-      createImageData: vi.fn(),
-      setTransform: vi.fn(),
-      drawImage: vi.fn(),
-      save: vi.fn(),
-      fillText: vi.fn(),
-      restore: vi.fn(),
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      closePath: vi.fn(),
-      stroke: vi.fn(),
-      translate: vi.fn(),
-      scale: vi.fn(),
-      rotate: vi.fn(),
-      arc: vi.fn(),
-      fill: vi.fn(),
-      measureText: vi.fn(() => ({ width: 0 })),
-      transform: vi.fn(),
-      rect: vi.fn(),
-      clip: vi.fn(),
-    } as unknown as CanvasRenderingContext2D;
-  }
-  return null;
-});
+HTMLCanvasElement.prototype.getContext = vi.fn((contextId: string) => {
+  return {
+    drawImage: vi.fn(),
+    getImageData: vi.fn(() => ({
+      data: new Uint8ClampedArray(400 * 400 * 4),
+      width: 400,
+      height: 400
+    })),
+    putImageData: vi.fn(),
+    createLinearGradient: vi.fn(() => ({
+      addColorStop: vi.fn()
+    })),
+    fillRect: vi.fn(),
+    measureText: vi.fn(() => ({ width: 0, actualBoundingBoxAscent: 0, actualBoundingBoxDescent: 0 })),
+    fillText: vi.fn(),
+    beginPath: vi.fn(),
+    roundRect: vi.fn(),
+    fill: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    clip: vi.fn()
+  };
+}) as any;
 
 HTMLCanvasElement.prototype.toDataURL = vi.fn(function(this: HTMLCanvasElement) {
   if (this.width === 5000) {
