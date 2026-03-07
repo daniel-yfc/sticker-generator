@@ -78,7 +78,7 @@ HTMLCanvasElement.prototype.getContext = vi.fn((contextId) => {
     } as unknown as CanvasRenderingContext2D;
   }
   return null;
-});
+}) as any;
 
 HTMLCanvasElement.prototype.toDataURL = vi.fn(function(this: HTMLCanvasElement) {
   if (this.width === 5000) {
