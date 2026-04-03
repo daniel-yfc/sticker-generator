@@ -4,6 +4,7 @@ import {
   validateImageDimensions,
   validateLocalStorageData,
   sanitizeErrorMessage,
+  isSafeImageUrl,
   MAX_FILE_SIZE,
   ALLOWED_MIME_TYPES,
 } from './validation';
@@ -117,6 +118,57 @@ describe('validation utilities', () => {
       const message = 'File upload failed: Network error';
       const sanitized = sanitizeErrorMessage(message);
       expect(sanitized).toBe(message);
+    });
+  });
+
+  describe('isSafeImageUrl', () => {
+    it('allows safe local image paths', () => {
+      expect(isSafeImageUrl('images/test.png')).toBe(true);
+      expect(isSafeImageUrl('images/subfolder/photo.jpg')).toBe(true);
+    });
+
+    it('blocks local paths with path traversal', () => {
+      expect(isSafeImageUrl('images/../etc/passwd')).toBe(false);
+      expect(isSafeImageUrl('images/valid/../../hidden')).toBe(false);
+    });
+
+    it('allows safe image data URLs', () => {
+      const safeDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      expect(isSafeImageUrl(safeDataUrl)).toBe(true);
+
+      const jpgDataUrl = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP...';
+      expect(isSafeImageUrl(jpgDataUrl)).toBe(true);
+    });
+
+    it('blocks unsafe data URLs', () => {
+      expect(isSafeImageUrl('data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==')).toBe(false);
+      expect(isSafeImageUrl('data:application/javascript;base64,YWxlcnQoMSk=')).toBe(false);
+    });
+
+    it('handles same-origin and cross-origin URLs', () => {
+      // Mock window.location.origin
+      const originalWindow = global.window;
+      global.window = {
+        location: {
+          origin: 'http://localhost:3000'
+        }
+      } as any;
+
+      expect(isSafeImageUrl('http://localhost:3000/logo.png')).toBe(true);
+      expect(isSafeImageUrl('https://malicious.com/attack.jpg')).toBe(false);
+
+      // Restore original window
+      if (originalWindow) {
+        global.window = originalWindow;
+      } else {
+        delete (global as any).window;
+      }
+    });
+
+    it('returns false for empty or invalid inputs', () => {
+      expect(isSafeImageUrl('')).toBe(false);
+      expect(isSafeImageUrl(null as any)).toBe(false);
+      expect(isSafeImageUrl('not-a-url')).toBe(false);
     });
   });
 });

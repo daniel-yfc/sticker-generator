@@ -195,3 +195,42 @@ export function validateHistory(data: any): StickerRecord[] {
 
   return validHistory;
 }
+
+/**
+ * Validates if a URL is safe for fetching
+ * Restricts to known safe local paths or safe data URLs
+ *
+ * @param url - The URL to validate
+ * @returns boolean indicating if the URL is safe
+ */
+export function isSafeImageUrl(url: string): boolean {
+  if (!url) return false;
+
+  // Allow relative paths from the local images directory
+  // In a production app, we might want to be even more restrictive
+  if (url.startsWith('images/')) {
+    // Basic path traversal protection: don't allow '..'
+    return !url.includes('..');
+  }
+
+  // Allow safe data URLs
+  if (url.startsWith('data:')) {
+    return /^data:image\/(png|jpeg|jpg|webp);base64,/.test(url);
+  }
+
+  try {
+    const parsedUrl = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+
+    // Allow same-origin URLs
+    if (typeof window !== 'undefined' && parsedUrl.origin === window.location.origin) {
+      return true;
+    }
+
+    // For external URLs, we could implement a whitelist here.
+    // Since the app currently only uses local images for its gallery,
+    // we reject all other external origins by default.
+    return false;
+  } catch (e) {
+    return false;
+  }
+}

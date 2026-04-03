@@ -14,7 +14,7 @@ import { AppStatus, StyleOption, Language, ViewMode, StickerRecord } from './typ
 import { generateSticker, generateStickerSet } from './services/geminiService';
 import { AlertCircle, Layers, Sticker, RefreshCw, Sparkles } from 'lucide-react';
 import { logger } from './utils/logger';
-import { validateHistory } from './utils/validation';
+import { validateHistory, isSafeImageUrl } from './utils/validation';
 
 const HISTORY_KEY = 'sticker_maker_history_v2';
 
@@ -97,6 +97,13 @@ const App: React.FC = () => {
       setSelectedStyle(style);
       
       if (imageUrl) {
+        if (!isSafeImageUrl(imageUrl)) {
+          logger.error("Blocked unsafe image URL import", imageUrl);
+          setErrorMessage(t('error_upload'));
+          setStatus(AppStatus.ERROR);
+          return;
+        }
+
         setStatus(AppStatus.UPLOADING);
         try {
           const response = await fetch(imageUrl);
