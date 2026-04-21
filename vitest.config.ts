@@ -11,11 +11,6 @@ export default defineConfig({
       deps: {
         inline: ['vitest-canvas-mock']
       }
-    },
-    poolOptions: {
-      threads: {
-        singleThread: true
-      }
     }
   },
 });
