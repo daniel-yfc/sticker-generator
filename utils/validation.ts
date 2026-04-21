@@ -124,18 +124,23 @@ export function validateLocalStorageData(key: string, data: string): ValidationR
 }
 
 /**
- * Sanitizes error messages to prevent XSS attacks
- * Removes potentially dangerous HTML/script tags
+ * Sanitizes error messages to prevent XSS attacks.
+ * Since the application uses React, it already benefits from automatic escaping
+ * when rendering strings in JSX. This function provides an additional layer of
+ * safety by converting potentially dangerous characters into HTML entities.
  * 
  * @param message - Error message to sanitize
  * @returns Sanitized message
  */
 export function sanitizeErrorMessage(message: string): string {
+  if (!message || typeof message !== 'string') return '';
+
   return message
-    .replace(/<script[^>]*>.*?<\/script>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/javascript:/gi, '')
-    .replace(/on\w+\s*=/gi, '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
     .trim();
 }
 

@@ -93,30 +93,42 @@ describe('validation utilities', () => {
   });
 
   describe('sanitizeErrorMessage', () => {
-    it('should remove script tags', () => {
+    it('should escape script tags', () => {
       const message = 'Error: <script>alert("xss")</script>Something went wrong';
       const sanitized = sanitizeErrorMessage(message);
-      expect(sanitized).not.toContain('<script>');
-      expect(sanitized).not.toContain('alert');
+      expect(sanitized).toContain('&lt;script&gt;');
+      expect(sanitized).toContain('&lt;/script&gt;');
+      expect(sanitized).toContain('alert(&quot;xss&quot;)');
     });
 
-    it('should remove HTML tags', () => {
+    it('should escape HTML tags and attributes', () => {
       const message = 'Error: <div onclick="hack()">Click me</div>';
       const sanitized = sanitizeErrorMessage(message);
-      expect(sanitized).not.toContain('<div>');
-      expect(sanitized).not.toContain('onclick');
+      expect(sanitized).toBe('Error: &lt;div onclick=&quot;hack()&quot;&gt;Click me&lt;/div&gt;');
     });
 
-    it('should remove javascript: protocol', () => {
+    it('should escape special characters in javascript: protocol', () => {
       const message = 'javascript:alert("xss")';
       const sanitized = sanitizeErrorMessage(message);
-      expect(sanitized.toLowerCase()).not.toContain('javascript:');
+      expect(sanitized).toBe('javascript:alert(&quot;xss&quot;)');
     });
 
-    it('should preserve safe error messages', () => {
-      const message = 'File upload failed: Network error';
+    it('should escape nested and malformed tags', () => {
+      const payload = '<scr<script>ipt>alert(1)</scr</script>ipt>';
+      const sanitized = sanitizeErrorMessage(payload);
+      expect(sanitized).toBe('&lt;scr&lt;script&gt;ipt&gt;alert(1)&lt;/scr&lt;/script&gt;ipt&gt;');
+    });
+
+    it('should preserve tag-like strings by escaping them', () => {
+      const payload = 'a < b and c > d';
+      const sanitized = sanitizeErrorMessage(payload);
+      expect(sanitized).toBe('a &lt; b and c &gt; d');
+    });
+
+    it('should preserve safe error messages while escaping &', () => {
+      const message = 'File upload & network error';
       const sanitized = sanitizeErrorMessage(message);
-      expect(sanitized).toBe(message);
+      expect(sanitized).toBe('File upload &amp; network error');
     });
   });
 });
