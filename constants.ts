@@ -385,3 +385,8 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   { id: '13', imageUrl: 'images/illus012.png', styleId: 1, author: 'Pipe_Dude' },
   { id: '14', imageUrl: 'images/illus02.png', styleId: 5, author: 'Render_Pro' },
 ];
+
+export const STYLES_MAP: Record<number, StyleOption> = STYLES.reduce((acc, style) => {
+  acc[style.id] = style;
+  return acc;
+}, {} as Record<number, StyleOption>);
