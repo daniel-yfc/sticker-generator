@@ -68,7 +68,7 @@ const App: React.FC = () => {
 
   const addToHistory = (imageUrl: string, styleId: number) => {
     const newRecord: StickerRecord = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      id: crypto.randomUUID(),
       imageUrl,
       styleId,
       timestamp: Date.now()
