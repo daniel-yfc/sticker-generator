@@ -58,6 +58,7 @@ HTMLCanvasElement.prototype.getContext = vi.fn((contextId: string) => {
       createImageData: vi.fn(),
       setTransform: vi.fn(),
       drawImage: vi.fn(),
+      createPattern: vi.fn(),
       save: vi.fn(),
       fillText: vi.fn(),
       restore: vi.fn(),
