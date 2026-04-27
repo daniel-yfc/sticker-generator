@@ -158,8 +158,3 @@ export const stickerGenerationLimiter = new RateLimiter({
   keyPrefix: 'sticker_gen',
 });
 
-export const fileUploadLimiter = new RateLimiter({
-  maxRequests: 20,    // 20 uploads
-  windowMs: 60000,    // per minute
-  keyPrefix: 'file_upload',
-});
