@@ -40,13 +40,13 @@ class MockImage {
 global.Image = MockImage as any;
 
 // Mock Canvas API manually
-HTMLCanvasElement.prototype.getContext = vi.fn((contextId) => {
+HTMLCanvasElement.prototype.getContext = vi.fn((contextId: string) => {
   if (contextId === '2d') {
     return {
       fillStyle: '',
       fillRect: vi.fn(),
       clearRect: vi.fn(),
-      getImageData: vi.fn((x, y, w, h) => {
+      getImageData: vi.fn((x: number, y: number, w: number, h: number) => {
         // Return a mock ImageData object
         return {
           data: new Uint8ClampedArray(w * h * 4).map((_, i) => i % 4 === 3 ? 0 : 255), // Some transparent pixels
@@ -58,6 +58,7 @@ HTMLCanvasElement.prototype.getContext = vi.fn((contextId) => {
       createImageData: vi.fn(),
       setTransform: vi.fn(),
       drawImage: vi.fn(),
+      createPattern: vi.fn(),
       save: vi.fn(),
       fillText: vi.fn(),
       restore: vi.fn(),

@@ -45,7 +45,7 @@ function validateAndExtractImageData(imageBase64: string): { mimeType: string; b
   // For unsupported MIME types or invalid formats, attempt generic extraction
   let base64Data = imageBase64;
   if (imageBase64.startsWith("data:")) {
-    const commaIndex = imageBase64.indexOf(',');
+    const commaIndex = imageBase64.indexOf(",");
     if (commaIndex !== -1) {
       base64Data = imageBase64.slice(commaIndex + 1);
     }
@@ -167,6 +167,19 @@ function extractImageFromResponse(response: GenerateContentResponse): string {
   throw new Error("error_no_image");
 }
 
+/**
+ * Handles and formats Gemini API errors
+ * @param error - The error thrown during API call
+ * @throws A formatted and sanitized Error
+ */
+function handleGeminiError(error: unknown): never {
+  logger.error("Gemini API Error:", error);
+
+  const errorMessage = error instanceof Error ? error.message : "error_process";
+  const sanitizedMessage = sanitizeErrorMessage(errorMessage);
+
+  throw new Error(sanitizedMessage);
+}
 
 /**
  * Generates a sticker from an image using Gemini AI
@@ -224,12 +237,7 @@ export const generateSticker = async (
     return extractImageFromResponse(response);
 
   } catch (error: unknown) {
-    logger.error("Gemini API Error:", error);
-    
-    const errorMessage = error instanceof Error ? error.message : "error_process";
-    const sanitizedMessage = sanitizeErrorMessage(errorMessage);
-    
-    throw new Error(sanitizedMessage);
+    handleGeminiError(error);
   }
 };
 

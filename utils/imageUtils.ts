@@ -18,24 +18,62 @@ export const removeBackgroundMagicWand = (imageUrl: string): Promise<string> => 
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
 
-        // Simple logic: Assume corners are background. Make white/light pixels transparent if they are connected to corners?
-        // For stickers, usually the background is white. Let's make pure white transparent.
-        // A robust flood fill is better, but expensive. Let's try color keying near white.
+        // Finish execution and resolve promise
+        const finish = () => {
+          ctx.putImageData(imageData, 0, 0);
+          const newUrl = canvas.toDataURL('image/png');
+          resolve(newUrl);
+        };
 
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
+        if (data.byteOffset % 4 === 0 && data.length % 4 === 0) {
+          const data32 = new Uint32Array(data.buffer, data.byteOffset, data.length / 4);
+          const len = data32.length;
+          const isLittleEndian = new Uint8Array(new Uint32Array([0x12345678]).buffer)[0] === 0x78;
+          const CHUNK_SIZE = 250000;
+          let i = 0;
 
-          // Check for white/near-white
-          if (r > 240 && g > 240 && b > 240) {
-            data[i + 3] = 0; // Alpha 0
-          }
+          const processChunk = () => {
+            const end = Math.min(i + CHUNK_SIZE, len);
+            if (isLittleEndian) {
+              for (; i < end; i++) {
+                const pixel = data32[i];
+                if ((pixel & 0xFF) > 240 && ((pixel >> 8) & 0xFF) > 240 && ((pixel >> 16) & 0xFF) > 240) {
+                  data32[i] = pixel & 0x00FFFFFF;
+                }
+              }
+            } else {
+              for (; i < end; i++) {
+                const pixel = data32[i];
+                if ((pixel >>> 24) > 240 && ((pixel >> 16) & 0xFF) > 240 && ((pixel >> 8) & 0xFF) > 240) {
+                  data32[i] = pixel & 0xFFFFFF00;
+                }
+              }
+            }
+            if (i < len) {
+              setTimeout(processChunk, 0);
+            } else {
+              finish();
+            }
+          };
+          processChunk();
+        } else {
+          const CHUNK_SIZE = 1000000;
+          let i = 0;
+          const processChunk = () => {
+            const end = Math.min(i + CHUNK_SIZE, data.length);
+            for (; i < end; i += 4) {
+              if (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240) {
+                data[i + 3] = 0;
+              }
+            }
+            if (i < data.length) {
+              setTimeout(processChunk, 0);
+            } else {
+              finish();
+            }
+          };
+          processChunk();
         }
-
-        ctx.putImageData(imageData, 0, 0);
-        const newUrl = canvas.toDataURL('image/png');
-        resolve(newUrl);
       } catch (error: unknown) {
         reject(error);
       }

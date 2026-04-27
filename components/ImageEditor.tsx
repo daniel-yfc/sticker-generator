@@ -46,14 +46,24 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
     
     // Draw transparent grid background
     const patternSize = 20;
+    // Base fill as fallback
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#ddd';
-    for (let i = 0; i < canvas.width; i += patternSize) {
-      for (let j = 0; j < canvas.height; j += patternSize) {
-        if ((i / patternSize + j / patternSize) % 2 === 0) {
-          ctx.fillRect(i, j, patternSize, patternSize);
-        }
+
+    const pCanvas = document.createElement('canvas');
+    pCanvas.width = patternSize * 2;
+    pCanvas.height = patternSize * 2;
+    const pCtx = pCanvas.getContext('2d');
+    if (pCtx) {
+      pCtx.fillStyle = '#f0f0f0';
+      pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
+      pCtx.fillStyle = '#ddd';
+      pCtx.fillRect(0, 0, patternSize, patternSize);
+      pCtx.fillRect(patternSize, patternSize, patternSize, patternSize);
+      const pattern = ctx.createPattern(pCanvas, 'repeat');
+      if (pattern) {
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
     }
 
