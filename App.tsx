@@ -66,14 +66,14 @@ const App: React.FC = () => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history]);
 
-  const addToHistory = (imageUrl: string, styleId: number) => {
-    const newRecord: StickerRecord = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      imageUrl,
-      styleId,
+  const addToHistory = (items: { imageUrl: string; styleId: number }[]) => {
+    const newRecords: StickerRecord[] = items.map(item => ({
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5) + Math.random(),
+      imageUrl: item.imageUrl,
+      styleId: item.styleId,
       timestamp: Date.now()
-    };
-    setHistory(prev => [newRecord, ...prev]);
+    }));
+    setHistory(prev => [...newRecords, ...prev]);
   };
 
   const deleteFromHistory = (id: string) => {
@@ -162,7 +162,7 @@ const App: React.FC = () => {
       img.onload = () => {
           clearTimeout(uiTimeout);
           setGeneratedImage(resultImage);
-          addToHistory(resultImage, selectedStyle.id);
+          addToHistory([{ imageUrl: resultImage, styleId: selectedStyle.id }]);
           setStatus(AppStatus.SUCCESS);
       };
       img.onerror = () => {
@@ -199,7 +199,7 @@ const App: React.FC = () => {
 
     try {
       const results = await generateStickerSet(processedImage, selectedStyle, variations);
-      results.forEach(imgUrl => addToHistory(imgUrl, selectedStyle.id));
+      addToHistory(results.map(imgUrl => ({ imageUrl: imgUrl, styleId: selectedStyle.id })));
       setGeneratedSet(results);
       setStatus(AppStatus.SET_SUCCESS);
     } catch (error: unknown) {
