@@ -242,7 +242,7 @@ export const generateSticker = async (
  * @param concurrencyLimit - Maximum number of concurrent operations
  * @returns Promise resolving to array of results
  */
-export const throttledMap = async <T, R>(
+const throttledMap = async <T, R>(
   items: T[],
   fn: (item: T) => Promise<R>,
   concurrencyLimit: number = BATCH_CONCURRENCY
