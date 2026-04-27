@@ -43,9 +43,12 @@ function validateAndExtractImageData(imageBase64: string): { mimeType: string; b
   const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
 
   // For unsupported MIME types or invalid formats, attempt generic extraction
-  let base64Data = imageBase64.replace(/^data:image\/(?:png|jpeg|jpg|webp);base64,/, "");
-  if (base64Data === imageBase64 && imageBase64.startsWith("data:")) {
-    base64Data = imageBase64.replace(/^data:[^;]+;base64,/, "");
+  let base64Data = imageBase64;
+  if (imageBase64.startsWith("data:")) {
+    const commaIndex = imageBase64.indexOf(',');
+    if (commaIndex !== -1) {
+      base64Data = imageBase64.slice(commaIndex + 1);
+    }
   }
 
   // Validate base64 data exists and looks valid
