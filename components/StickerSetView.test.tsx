@@ -31,6 +31,7 @@ describe('StickerSetView', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it('renders correctly with given stickers', () => {
@@ -54,6 +55,7 @@ describe('StickerSetView', () => {
   });
 
   it('calls downloadImage for each sticker when download all button is clicked', () => {
+    vi.useFakeTimers();
     render(<StickerSetView {...mockProps} />);
 
     // There are multiple "btn_download" texts: one on the main button and one on each individual sticker title attribute.
@@ -64,6 +66,7 @@ describe('StickerSetView', () => {
     }
 
     fireEvent.click(downloadAllButton);
+    vi.runAllTimers();
 
     expect(downloadImage).toHaveBeenCalledTimes(3);
     expect(downloadImage).toHaveBeenNthCalledWith(

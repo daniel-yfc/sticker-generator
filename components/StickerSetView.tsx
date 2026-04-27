@@ -17,7 +17,9 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({ stickers, style, onRese
 
   const handleDownloadAll = () => {
     stickers.forEach((url, index) => {
-      downloadImage(url, `sticker-pro-set-${style.id}-${index}-${Date.now()}.png`);
+      setTimeout(() => {
+        downloadImage(url, `sticker-pro-set-${style.id}-${index}-${Date.now()}.png`);
+      }, index * 150);
     });
   };
 

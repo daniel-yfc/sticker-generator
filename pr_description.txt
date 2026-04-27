@@ -1,0 +1,5 @@
+⚡ Update StickerSetView to stagger downloads, preventing UI stuttering
+
+💡 **What:** The `handleDownloadAll` function in `StickerSetView.tsx` was modified to stagger sticker downloads using `setTimeout` with a delay of `150ms * index`. The corresponding test in `StickerSetView.test.tsx` was updated to use `vi.useFakeTimers()` to run the timers synchronously for assertions, and then restore real timers.
+🎯 **Why:** Previously, downloading multiple stickers would trigger synchronous download requests, which could lead to UI stuttering and potential browser throttling.
+📊 **Measured Improvement:** While an exact benchmark wasn't possible due to the asynchronous and browser-specific nature of file downloads, adding a 150ms delay between download calls allows the browser to process each download request without blocking the main UI thread as heavily, leading to a smoother user experience.
