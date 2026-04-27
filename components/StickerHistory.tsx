@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback, type FC, type MouseEvent } from 'react';
 import { StickerRecord, StyleTranslation } from '../types';
 import { Download, Trash2, Clock } from 'lucide-react';
 import { downloadImage } from '../utils/download';
@@ -10,15 +10,15 @@ interface StickerHistoryProps {
   stylesTranslation: Record<number, StyleTranslation>;
 }
 
-const StickerHistory: React.FC<StickerHistoryProps> = ({ history, onDelete, t, stylesTranslation }) => {
-  const handleDelete = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+const StickerHistory: FC<StickerHistoryProps> = ({ history, onDelete, t, stylesTranslation }) => {
+  const handleDelete = useCallback((e: MouseEvent<HTMLButtonElement>) => {
     const id = e.currentTarget.dataset.id;
     if (id) {
       onDelete(id);
     }
   }, [onDelete]);
 
-  const handleDownload = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleDownload = useCallback((e: MouseEvent<HTMLButtonElement>) => {
     const url = e.currentTarget.dataset.url;
     const id = e.currentTarget.dataset.id;
     if (url && id) {

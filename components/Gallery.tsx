@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import { useCallback, type FC, type MouseEvent } from 'react';
 import { GALLERY_ITEMS } from '../constants';
 import { GalleryItem, StyleTranslation } from '../types';
 import { Palette, PlayCircle, DownloadCloud } from 'lucide-react';
@@ -10,15 +10,15 @@ interface GalleryProps {
   stylesTranslation: Record<number, StyleTranslation>;
 }
 
-const Gallery: React.FC<GalleryProps> = ({ onSelectStyle, t, stylesTranslation }) => {
-  const handleTryStyle = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+const Gallery: FC<GalleryProps> = ({ onSelectStyle, t, stylesTranslation }) => {
+  const handleTryStyle = useCallback((e: MouseEvent<HTMLButtonElement>) => {
     const styleId = parseInt(e.currentTarget.dataset.styleid || "0", 10);
     if (styleId) {
       onSelectStyle(styleId);
     }
   }, [onSelectStyle]);
 
-  const handleImportSample = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleImportSample = useCallback((e: MouseEvent<HTMLButtonElement>) => {
     const styleId = parseInt(e.currentTarget.dataset.styleid || "0", 10);
     const imageUrl = e.currentTarget.dataset.url;
     if (styleId && imageUrl) {

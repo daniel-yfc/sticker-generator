@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback, type FC, type ChangeEvent } from 'react';
 import { UploadCloud, Edit, RefreshCw } from 'lucide-react';
 import { MAX_FILE_SIZE } from '../constants';
 
@@ -12,12 +12,12 @@ interface FileUploadProps {
 }
 
 interface CommonUploadProps {
-  handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
   disabled: boolean;
   t: (key: string) => string;
 }
 
-const CompactUpload: React.FC<CommonUploadProps> = ({ handleFileChange, disabled, t }) => (
+const CompactUpload: FC<CommonUploadProps> = ({ handleFileChange, disabled, t }) => (
   <div className="w-full">
     <label className={`
       flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border-2 border-dashed transition-all cursor-pointer
@@ -41,7 +41,7 @@ interface PreviewUploadProps extends CommonUploadProps {
   onEditClick?: () => void;
 }
 
-const PreviewUpload: React.FC<PreviewUploadProps> = ({ currentPreview, onEditClick, handleFileChange, disabled, t }) => (
+const PreviewUpload: FC<PreviewUploadProps> = ({ currentPreview, onEditClick, handleFileChange, disabled, t }) => (
   <div className="bg-white rounded-xl border-2 border-indigo-100 p-4 shadow-sm animate-fadeIn">
     <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative mb-3 transparent-grid">
       <img src={currentPreview} alt="Preview" className="w-full h-full object-contain" />
@@ -71,7 +71,7 @@ const PreviewUpload: React.FC<PreviewUploadProps> = ({ currentPreview, onEditCli
   </div>
 );
 
-const EmptyUpload: React.FC<CommonUploadProps> = ({ handleFileChange, disabled, t }) => (
+const EmptyUpload: FC<CommonUploadProps> = ({ handleFileChange, disabled, t }) => (
   <div className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors h-[280px] flex flex-col items-center justify-center
     ${disabled ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-300 hover:border-indigo-500 hover:bg-indigo-50/10'}`}>
 
@@ -99,8 +99,8 @@ const EmptyUpload: React.FC<CommonUploadProps> = ({ handleFileChange, disabled, 
   </div>
 );
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, currentPreview, onEditClick, disabled, t, mode = 'hero' }) => {
-  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+const FileUpload: FC<FileUploadProps> = ({ onFileSelect, currentPreview, onEditClick, disabled, t, mode = 'hero' }) => {
+  const handleFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0];
       if (file.size > MAX_FILE_SIZE) {

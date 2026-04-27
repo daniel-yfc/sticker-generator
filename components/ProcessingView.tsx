@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, type FC } from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface ProcessingViewProps {
   t: (key: string) => any; // Keep 'any' here or use union because 'processing_steps' returns an array of strings
 }
 
-const ProcessingView: React.FC<ProcessingViewProps> = ({ t }) => {
+const ProcessingView: FC<ProcessingViewProps> = ({ t }) => {
   const [progress, setProgress] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const steps = t('processing_steps');

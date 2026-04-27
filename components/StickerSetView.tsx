@@ -1,5 +1,5 @@
 
-import React from 'react';
+import { type FC } from 'react';
 import { Download, RefreshCcw, Check } from 'lucide-react';
 import { StyleOption } from '../types';
 import { downloadImage } from '../utils/download';
@@ -12,7 +12,7 @@ interface StickerSetViewProps {
   stylesTranslation: Record<number, { name: string, features: string }>;
 }
 
-const StickerSetView: React.FC<StickerSetViewProps> = ({ stickers, style, onReset, t, stylesTranslation }) => {
+const StickerSetView: FC<StickerSetViewProps> = ({ stickers, style, onReset, t, stylesTranslation }) => {
   const styleName = stylesTranslation[style.id]?.name || style.id;
 
   const handleDownloadAll = () => {

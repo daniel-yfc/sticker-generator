@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, type FC } from 'react';
 import Header from './components/Header';
 import StyleSelector from './components/StyleSelector';
 import FileUpload from './components/FileUpload';
@@ -18,9 +18,9 @@ import { validateHistory } from './utils/validation';
 
 const HISTORY_KEY = 'sticker_maker_history_v2';
 
-const App: React.FC = () => {
+const App: FC = () => {
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
-  const statusRef = React.useRef(status);
+  const statusRef = useRef(status);
   
   useEffect(() => {
     statusRef.current = status;

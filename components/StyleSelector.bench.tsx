@@ -1,6 +1,5 @@
 import { bench, describe } from 'vitest';
 import { render } from '@testing-library/react';
-import React from 'react';
 import StyleSelector from './StyleSelector';
 import { STYLES } from '../constants';
 

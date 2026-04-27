@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FC } from 'react';
 import { Download, RefreshCcw, Check, Wand2, Repeat } from 'lucide-react';
 import { StyleOption, StyleTranslation } from '../types';
 import { downloadImage } from '../utils/download';
@@ -14,7 +14,7 @@ interface ResultDisplayProps {
   stylesTranslation: Record<number, StyleTranslation>;
 }
 
-const ResultDisplay: React.FC<ResultDisplayProps> = ({ imageUrl, style, onReset, onReuse, onImageUpdate, t, stylesTranslation }) => {
+const ResultDisplay: FC<ResultDisplayProps> = ({ imageUrl, style, onReset, onReuse, onImageUpdate, t, stylesTranslation }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleDownload = () => {

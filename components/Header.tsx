@@ -1,4 +1,4 @@
-import React from 'react';
+import { type FC } from 'react';
 import { Sparkles, Sticker, Globe } from 'lucide-react';
 import { Language, ViewMode } from '../types';
 
@@ -10,7 +10,7 @@ interface HeaderProps {
   t: (key: string) => string;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, currentLang, onLangChange, t }) => {
+const Header: FC<HeaderProps> = ({ currentView, onViewChange, currentLang, onLangChange, t }) => {
   const navItems: { id: ViewMode; label: string }[] = [
     { id: 'create', label: t('nav_create') },
     { id: 'history', label: t('nav_history') },

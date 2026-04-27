@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo } from 'react';
+import { useState, useCallback, memo, type FC, type ElementType } from 'react';
 import { STYLES } from '../constants';
 import { StyleOption, StyleTranslation } from '../types';
 import { CheckCircle2, Info } from 'lucide-react';
@@ -14,7 +14,7 @@ interface StyleSelectorProps {
 }
 
 const renderIcon = (iconName: string) => {
-  const IconComponent = (Icons as Record<string, React.ElementType>)[iconName] || Icons.Image;
+  const IconComponent = (Icons as Record<string, ElementType>)[iconName] || Icons.Image;
   return <IconComponent className="w-5 h-5 text-white" />;
 };
 
@@ -24,7 +24,7 @@ interface TooltipProps {
   isGrid?: boolean;
 }
 
-const Tooltip: React.FC<TooltipProps> = memo(({ style, styleInfo, isGrid }) => {
+const Tooltip: FC<TooltipProps> = memo(({ style, styleInfo, isGrid }) => {
   if (isGrid) {
     return (
       <div className="absolute z-50 w-64 p-3 bg-gray-900 text-white text-xs rounded-xl shadow-2xl bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none animate-fadeIn">
@@ -67,7 +67,7 @@ interface StyleItemProps {
   onSelect: (style: StyleOption) => void;
 }
 
-const SidebarStyleItem: React.FC<StyleItemProps> = memo(({
+const SidebarStyleItem: FC<StyleItemProps> = memo(({
   styleOption, styleInfo, isSelected, disabled, isHovered, onMouseEnter, onMouseLeave, onSelect
 }) => {
   const handleMouseEnter = useCallback(() => onMouseEnter(styleOption.id), [onMouseEnter, styleOption.id]);
@@ -110,7 +110,7 @@ const SidebarStyleItem: React.FC<StyleItemProps> = memo(({
   );
 });
 
-const GridStyleItem: React.FC<StyleItemProps> = memo(({
+const GridStyleItem: FC<StyleItemProps> = memo(({
   styleOption, styleInfo, isSelected, disabled, isHovered, onMouseEnter, onMouseLeave, onSelect
 }) => {
   const handleMouseEnter = useCallback(() => onMouseEnter(styleOption.id), [onMouseEnter, styleOption.id]);
@@ -162,7 +162,7 @@ const GridStyleItem: React.FC<StyleItemProps> = memo(({
   );
 });
 
-const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, disabled, t, stylesTranslation, mode = 'grid' }) => {
+const StyleSelector: FC<StyleSelectorProps> = ({ selectedStyle, onSelect, disabled, t, stylesTranslation, mode = 'grid' }) => {
   const selectedStyleName = stylesTranslation[selectedStyle.id]?.name || selectedStyle.id;
   const [hoveredStyle, setHoveredStyle] = useState<number | null>(null);
 
