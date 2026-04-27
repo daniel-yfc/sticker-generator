@@ -93,30 +93,63 @@ describe('validation utilities', () => {
   });
 
   describe('sanitizeErrorMessage', () => {
-    it('should remove script tags', () => {
+    it('should escape script tags', () => {
       const message = 'Error: <script>alert("xss")</script>Something went wrong';
       const sanitized = sanitizeErrorMessage(message);
+      expect(sanitized).toContain('&lt;script&gt;');
+      expect(sanitized).toContain('&quot;xss&quot;');
       expect(sanitized).not.toContain('<script>');
-      expect(sanitized).not.toContain('alert');
     });
 
-    it('should remove HTML tags', () => {
+    it('should handle script tags with newlines', () => {
+      const message = 'Error: <script>\nalert("xss")\n</script>Something went wrong';
+      const sanitized = sanitizeErrorMessage(message);
+      expect(sanitized).toContain('&lt;script&gt;');
+      expect(sanitized).not.toContain('<script>');
+    });
+
+    it('should escape HTML tags', () => {
       const message = 'Error: <div onclick="hack()">Click me</div>';
       const sanitized = sanitizeErrorMessage(message);
-      expect(sanitized).not.toContain('<div>');
-      expect(sanitized).not.toContain('onclick');
+      expect(sanitized).toContain('&lt;div');
+      expect(sanitized).toContain('onclick=&quot;hack()&quot;');
+      expect(sanitized).not.toContain('<div');
     });
 
-    it('should remove javascript: protocol', () => {
+    it('should preserve content but escape tags in attribute-based attacks', () => {
+      const message = '<img src=x onerror=alert(1)>';
+      const sanitized = sanitizeErrorMessage(message);
+      expect(sanitized).toBe('&lt;img src=x onerror=alert(1)&gt;');
+    });
+
+    it('should handle dangerous protocols (though escaping handles this if in tags)', () => {
       const message = 'javascript:alert("xss")';
       const sanitized = sanitizeErrorMessage(message);
-      expect(sanitized.toLowerCase()).not.toContain('javascript:');
+      // Since it's not a tag, it's just escaped for quotes
+      expect(sanitized).toBe('javascript:alert(&quot;xss&quot;)');
+    });
+
+    it('should handle mixed case tags', () => {
+      const message = '<sCrIpT>alert(1)</sCrIpT>';
+      const sanitized = sanitizeErrorMessage(message);
+      expect(sanitized).toContain('&lt;sCrIpT&gt;');
+      expect(sanitized).not.toContain('<sCrIpT>');
     });
 
     it('should preserve safe error messages', () => {
       const message = 'File upload failed: Network error';
       const sanitized = sanitizeErrorMessage(message);
       expect(sanitized).toBe(message);
+    });
+
+    it('should handle empty input gracefully', () => {
+      expect(sanitizeErrorMessage('')).toBe('');
+    });
+
+    it('should escape all special characters', () => {
+      const message = 'Error & failure < > " \'';
+      const sanitized = sanitizeErrorMessage(message);
+      expect(sanitized).toBe('Error &amp; failure &lt; &gt; &quot; &#039;');
     });
   });
 });
