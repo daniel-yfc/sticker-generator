@@ -9,7 +9,7 @@ import Gallery from './components/Gallery';
 import StickerHistory from './components/StickerHistory';
 import ImageEditor from './components/ImageEditor';
 import StickerSetView from './components/StickerSetView';
-import { STYLES, TRANSLATIONS } from './constants';
+import { STYLES, STYLES_MAP, TRANSLATIONS } from './constants';
 import { AppStatus, StyleOption, Language, ViewMode, StickerRecord } from './types';
 import { generateSticker, generateStickerSet } from './services/geminiService';
 import { AlertCircle, Layers, Sticker, RefreshCw, Sparkles } from 'lucide-react';
@@ -92,7 +92,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleGallerySelect = async (styleId: number, imageUrl?: string) => {
-    const style = STYLES.find(s => s.id === styleId);
+    const style = STYLES_MAP[styleId];
     if (style) {
       setSelectedStyle(style);
       

@@ -16,6 +16,17 @@ export const ALLOWED_MIME_TYPES = [
   'image/webp',
 ] as const;
 
+export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number];
+
+/**
+ * Type guard to check if a MIME type is allowed
+ * @param type - MIME type to check
+ * @returns boolean indicating if the MIME type is allowed
+ */
+export function isAllowedMimeType(type: string): type is AllowedMimeType {
+  return (ALLOWED_MIME_TYPES as readonly string[]).includes(type);
+}
+
 export const MAX_LOCALSTORAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export interface ValidationResult {
@@ -40,7 +51,7 @@ export function validateFile(file: File): ValidationResult {
   }
 
   // Check MIME type
-  if (!ALLOWED_MIME_TYPES.includes(file.type as any)) {
+  if (!isAllowedMimeType(file.type)) {
     return {
       valid: false,
       error: `File type ${file.type} is not supported. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`,
@@ -125,17 +136,20 @@ export function validateLocalStorageData(key: string, data: string): ValidationR
 
 /**
  * Sanitizes error messages to prevent XSS attacks
- * Removes potentially dangerous HTML/script tags
+ * Escapes HTML special characters to prevent rendering as HTML
  * 
  * @param message - Error message to sanitize
  * @returns Sanitized message
  */
 export function sanitizeErrorMessage(message: string): string {
+  if (!message) return '';
+
   return message
-    .replace(/<script[^>]*>.*?<\/script>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/javascript:/gi, '')
-    .replace(/on\w+\s*=/gi, '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
     .trim();
 }
 
