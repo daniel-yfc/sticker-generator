@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  isAllowedMimeType,
   validateFile,
   validateImageDimensions,
   validateLocalStorageData,
@@ -11,6 +12,29 @@ import {
 } from './validation';
 
 describe('validation utilities', () => {
+  describe('isAllowedMimeType', () => {
+    it('should return true for all allowed MIME types', () => {
+      ALLOWED_MIME_TYPES.forEach((type) => {
+        expect(isAllowedMimeType(type)).toBe(true);
+      });
+    });
+
+    it('should return false for unsupported MIME types', () => {
+      const unsupported = ['image/gif', 'application/pdf', 'text/plain', 'image/bmp'];
+      unsupported.forEach((type) => {
+        expect(isAllowedMimeType(type)).toBe(false);
+      });
+    });
+
+    it('should return false for empty string', () => {
+      expect(isAllowedMimeType('')).toBe(false);
+    });
+
+    it('should be case-sensitive', () => {
+      expect(isAllowedMimeType('IMAGE/PNG')).toBe(false);
+    });
+  });
+
   describe('validateFile', () => {
     it('should accept valid image files', () => {
       const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
