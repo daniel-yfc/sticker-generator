@@ -108,3 +108,15 @@ describe('RateLimiter', () => {
     Storage.prototype.setItem = originalSetItem;
   });
 });
+
+describe('RateLimiter validation', () => {
+  it('should throw error when maxRequests is zero or negative', () => {
+    expect(() => new RateLimiter({ maxRequests: 0, windowMs: 1000 })).toThrow('maxRequests must be positive');
+    expect(() => new RateLimiter({ maxRequests: -1, windowMs: 1000 })).toThrow('maxRequests must be positive');
+  });
+
+  it('should throw error when windowMs is zero or negative', () => {
+    expect(() => new RateLimiter({ maxRequests: 10, windowMs: 0 })).toThrow('windowMs must be positive');
+    expect(() => new RateLimiter({ maxRequests: 10, windowMs: -1 })).toThrow('windowMs must be positive');
+  });
+});
