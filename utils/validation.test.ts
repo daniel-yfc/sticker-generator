@@ -192,6 +192,10 @@ describe('validation utilities', () => {
 
     it('should return false for invalid data URL', () => {
       expect(isValidStickerRecord({ ...validRecord, imageUrl: 'data:text/plain;base64,YWFh' })).toBe(false);
+      expect(isValidStickerRecord({ ...validRecord, imageUrl: 'data:image/png;base64,invalid!chars' })).toBe(false);
+      expect(isValidStickerRecord({ ...validRecord, imageUrl: 'data:image/png;base64,YWFh===' })).toBe(false);
+      expect(isValidStickerRecord({ ...validRecord, imageUrl: 'data:image/png;base64, ' })).toBe(false);
+      expect(isValidStickerRecord({ ...validRecord, imageUrl: 'data:image/png;base64,<script>alert(1)</script>' })).toBe(false);
     });
 
     it('should return false for missing or invalid styleId', () => {
