@@ -10,6 +10,7 @@ interface ImageEditorProps {
 
 const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel, t }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const patternRef = useRef<CanvasPattern | null>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -60,21 +61,24 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const pCanvas = document.createElement('canvas');
-    pCanvas.width = patternSize * 2;
-    pCanvas.height = patternSize * 2;
-    const pCtx = pCanvas.getContext('2d');
-    if (pCtx) {
-      pCtx.fillStyle = '#f0f0f0';
-      pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
-      pCtx.fillStyle = '#ddd';
-      pCtx.fillRect(0, 0, patternSize, patternSize);
-      pCtx.fillRect(patternSize, patternSize, patternSize, patternSize);
-      const pattern = ctx.createPattern(pCanvas, 'repeat');
-      if (pattern) {
-        ctx.fillStyle = pattern;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!patternRef.current) {
+      const pCanvas = document.createElement('canvas');
+      pCanvas.width = patternSize * 2;
+      pCanvas.height = patternSize * 2;
+      const pCtx = pCanvas.getContext('2d');
+      if (pCtx) {
+        pCtx.fillStyle = '#f0f0f0';
+        pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
+        pCtx.fillStyle = '#ddd';
+        pCtx.fillRect(0, 0, patternSize, patternSize);
+        pCtx.fillRect(patternSize, patternSize, patternSize, patternSize);
+        patternRef.current = ctx.createPattern(pCanvas, 'repeat');
       }
+    }
+
+    if (patternRef.current) {
+      ctx.fillStyle = patternRef.current;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
     ctx.save();
