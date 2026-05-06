@@ -1,5 +1,12 @@
-⚡ Update StickerSetView to stagger downloads, preventing UI stuttering
+🧹 [code health improvement] Refactor App State into Custom Hook
 
-💡 **What:** The `handleDownloadAll` function in `StickerSetView.tsx` was modified to stagger sticker downloads using `setTimeout` with a delay of `150ms * index`. The corresponding test in `StickerSetView.test.tsx` was updated to use `vi.useFakeTimers()` to run the timers synchronously for assertions, and then restore real timers.
-🎯 **Why:** Previously, downloading multiple stickers would trigger synchronous download requests, which could lead to UI stuttering and potential browser throttling.
-📊 **Measured Improvement:** While an exact benchmark wasn't possible due to the asynchronous and browser-specific nature of file downloads, adding a 150ms delay between download calls allows the browser to process each download request without blocking the main UI thread as heavily, leading to a smoother user experience.
+🎯 **What:** Extracted the complex state management and action handlers from `App.tsx` into a new custom hook called `useAppState`. Additionally, updated the `id` generation in `addToHistory` from using `Math.random()` to `crypto.randomUUID()` as per memory instructions for better cryptographic security.
+
+💡 **Why:** `App.tsx` had grown overly complex, mingling state definitions, effect hooks, and UI layout code. By extracting the state logic into `hooks/useAppState.ts`, the main component is now significantly more readable, easier to test, and focused purely on layout and composition. This separation of concerns improves long-term maintainability.
+
+✅ **Verification:**
+- The React component `App.tsx` was refactored without any syntax errors.
+- The project successfully builds (`npm run build`).
+- The full test suite passes (`npm run test`), ensuring no existing functionalities or interactions were broken.
+
+✨ **Result:** The codebase is now cleaner, with an `App.tsx` component that focuses almost entirely on rendering logic, while the complex state machine is neatly encapsulated in the `useAppState` custom hook.
