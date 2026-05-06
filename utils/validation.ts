@@ -174,7 +174,7 @@ export function isValidStickerRecord(item: any): item is StickerRecord {
 
   // URL Security Check: Prevent XSS via javascript: or other dangerous protocols
   try {
-    // If it's a data URL, verify it's an image
+    // If it's a data URL, verify it's an image and has valid base64 content
     if (imageUrl.startsWith('data:')) {
       return /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/]*={0,2}$/.test(imageUrl);
     }
