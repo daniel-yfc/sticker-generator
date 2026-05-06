@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { UploadCloud, Edit, RefreshCw } from 'lucide-react';
-import { MAX_FILE_SIZE } from '../constants';
+import { MAX_FILE_SIZE } from '../constants/config';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;

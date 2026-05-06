@@ -1,5 +1,5 @@
 import React, { useState, useCallback, memo } from 'react';
-import { STYLES } from '../constants';
+import { STYLES } from '../constants/styles';
 import { StyleOption, StyleTranslation } from '../types';
 import { CheckCircle2, Info } from 'lucide-react';
 import * as Icons from 'lucide-react';

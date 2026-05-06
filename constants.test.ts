@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_FILE_SIZE, STYLES, TRANSLATIONS, GALLERY_ITEMS } from './constants';
+import { MAX_FILE_SIZE } from './constants/config';
+import { STYLES } from './constants/styles';
+import { TRANSLATIONS } from './constants/translations';
+import { GALLERY_ITEMS } from './constants/gallery';
 
 describe('constants', () => {
   describe('MAX_FILE_SIZE', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generateSticker, generateStickerSet } from './geminiService';
 import { GoogleGenAI } from '@google/genai';
-import { STYLES } from '../constants';
+import { STYLES } from '../constants/styles';
 
 const originalEnv = process.env;
 

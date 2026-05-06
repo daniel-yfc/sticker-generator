@@ -10,7 +10,7 @@ vi.mock('lucide-react', () => ({
 }));
 
 // Mock constants
-vi.mock('../constants', () => ({
+vi.mock('../constants/gallery', () => ({
   GALLERY_ITEMS: [
     { id: '1', imageUrl: 'images/test1.png', styleId: 1, author: 'Author1' },
     { id: '2', imageUrl: 'images/test2.png', styleId: 2, author: 'Author2' },

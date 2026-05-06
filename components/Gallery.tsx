@@ -1,6 +1,6 @@
 
 import React, { useCallback } from 'react';
-import { GALLERY_ITEMS } from '../constants';
+import { GALLERY_ITEMS } from '../constants/gallery';
 import { GalleryItem, StyleTranslation } from '../types';
 import { Palette, PlayCircle, DownloadCloud } from 'lucide-react';
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import FileUpload from './FileUpload';
-import { MAX_FILE_SIZE } from '../constants';
+import { MAX_FILE_SIZE } from '../constants/config';
 
 // Mock translation function
 const mockT = (key: string) => `translated_${key}`;
