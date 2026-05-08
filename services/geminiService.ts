@@ -1,31 +1,44 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { StyleOption } from "../types";
 import { logger } from "../utils/logger";
 import { stickerGenerationLimiter } from "../utils/rateLimit";
 import { sanitizeErrorMessage } from "../utils/validation";
 import { buildStickerPrompt } from '../utils/promptBuilder';
 
-
 // Performance and security constants
 const API_TIMEOUT_MS = 60000; // 60 seconds
-const MAX_RETRIES = 1;
 const BATCH_CONCURRENCY = 2;
 
 /**
- * Validates API key at runtime
- * Provides clear error messaging for missing configuration
- * 
- * @throws Error if API key is missing or invalid
+ * Interface for the expected Gemini API response parts
  */
-function validateApiKey(): string {
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
-    logger.error('API Key validation failed');
-    throw new Error('API Key is missing. Please check your configuration.');
-  }
-  
-  return apiKey;
+interface GeminiResponsePart {
+  inlineData?: {
+    data: string;
+    mimeType?: string;
+  };
+  text?: string;
+}
+
+/**
+ * Interface for the expected Gemini API candidate
+ */
+interface GeminiCandidate {
+  content?: {
+    parts: GeminiResponsePart[];
+  };
+  finishReason?: string;
+}
+
+/**
+ * Interface for the Gemini API generateContent response
+ */
+interface GeminiGenerateContentResponse {
+  candidates?: GeminiCandidate[];
+  error?: {
+    message: string;
+    code: number;
+    status: string;
+  };
 }
 
 /**
@@ -84,8 +97,6 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, message: string): Promi
   ]);
 };
 
-
-
 /**
  * Checks if sticker generation is allowed by rate limit
  * @throws Error if rate limit is exceeded
@@ -100,16 +111,18 @@ function checkRateLimit(): void {
   }
 }
 
-
-
-
 /**
  * Validates the API response and extracts the base64 image data
- * @param response - The API response object
+ * @param response - The API response object from our proxy
  * @returns Base64 encoded PNG image
  * @throws Error for various failure conditions
  */
-function extractImageFromResponse(response: GenerateContentResponse): string {
+function extractImageFromResponse(response: GeminiGenerateContentResponse): string {
+  if (response.error) {
+    logger.error("Gemini API Error details:", response.error);
+    throw new Error(response.error.message);
+  }
+
   if (!response.candidates || response.candidates.length === 0) {
     throw new Error("error_safety");
   }
@@ -155,7 +168,7 @@ function handleGeminiError(error: unknown): never {
 }
 
 /**
- * Generates a sticker from an image using Gemini AI
+ * Generates a sticker from an image using Gemini AI via backend proxy
  * Includes rate limiting, validation, and comprehensive error handling
  * 
  * @param imageBase64 - Base64 encoded image string
@@ -171,10 +184,6 @@ export const generateSticker = async (
 ): Promise<string> => {
   checkRateLimit();
 
-  // Validate API key
-  const apiKey = validateApiKey();
-  const ai = new GoogleGenAI({ apiKey });
-
   try {
     // Validate and extract image data
     const { mimeType, base64Data } = validateAndExtractImageData(imageBase64);
@@ -183,26 +192,43 @@ export const generateSticker = async (
 
     logger.info('Generating sticker with style:', style.id);
 
-    const response: GenerateContentResponse = await withTimeout(
-      ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            { text: finalPrompt },
-            {
-              inlineData: {
-                mimeType: mimeType,
-                data: base64Data
-              }
-            }
-          ]
+    const apiCall = async () => {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        config: {
-          imageConfig: {
-            aspectRatio: "1:1"
+        body: JSON.stringify({
+          model: 'gemini-2.5-flash-image',
+          contents: {
+            parts: [
+              { text: finalPrompt },
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: base64Data
+                }
+              }
+            ]
+          },
+          generationConfig: {
+            imageConfig: {
+              aspectRatio: "1:1"
+            }
           }
-        }
-      }),
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `error_process`);
+      }
+
+      return response.json();
+    };
+
+    const response: GeminiGenerateContentResponse = await withTimeout(
+      apiCall(),
       API_TIMEOUT_MS,
       "error_timeout"
     );

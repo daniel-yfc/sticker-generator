@@ -15,12 +15,14 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/api': {
+            target: `http://localhost:${process.env.BACKEND_PORT || 3001}`,
+            changeOrigin: true,
+          }
+        }
       },
       plugins: [react(), tailwindcss()],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
