@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generateSticker, generateStickerSet } from './geminiService';
 import { GoogleGenAI } from '@google/genai';
 import { STYLES } from '../constants';
+import { stickerGenerationLimiter } from '../utils/rateLimit';
 
 const originalEnv = process.env;
 
@@ -17,6 +18,13 @@ vi.mock('@google/genai', () => {
             generateContent: (...args: any[]) => mockGenerateContent(...args)
         }
     }
+  };
+});
+
+// Mock the rate limiter so we don't run into it during tests
+vi.mock('../utils/rateLimit', () => {
+  return {
+    stickerGenerationLimiter: { check: vi.fn(() => ({ allowed: true, remaining: 10, resetTime: 0 })) }
   };
 });
 
@@ -213,6 +221,23 @@ describe('geminiService', () => {
       expect(results).toHaveLength(2);
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
       expect(results).toEqual(['data:image/png;base64,batch-img-data', 'data:image/png;base64,batch-img-data']);
+    });
+
+    it('rejects if any sticker generation fails', async () => {
+      // First call succeeds, second fails
+      // We need to reset the rate limiter or it will trigger. Wait, rate limiter is global in the test.
+      // Let's reset the rate limiter before the test.
+      vi.mocked(mockGenerateContent).mockClear();
+      mockGenerateContent
+        .mockResolvedValueOnce({
+          candidates: [{ finishReason: 'STOP', content: { parts: [{ inlineData: { data: 'batch-img-data' } }] } }]
+        })
+        .mockRejectedValueOnce(new Error('API Error'));
+
+      const variations = ['var1', 'var2'];
+      const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
+
+      await expect(generateStickerSet(validBase64, STYLES[0], variations)).rejects.toThrow('API Error');
     });
   });
 
