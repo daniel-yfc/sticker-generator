@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev:frontend": "vite",
+    "dev:backend": "node server.cjs",
+    "dev": "npm run dev:backend & npm run dev:frontend",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run"

@@ -8,6 +8,9 @@ interface ImageEditorProps {
   t: (key: string) => string;
 }
 
+const PATTERN_SIZE = 20;
+let sharedPattern: CanvasPattern | null = null;
+
 const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel, t }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -16,6 +19,16 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+
 
   // Load image
   useEffect(() => {
@@ -45,26 +58,28 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw transparent grid background
-    const patternSize = 20;
     // Base fill as fallback
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const pCanvas = document.createElement('canvas');
-    pCanvas.width = patternSize * 2;
-    pCanvas.height = patternSize * 2;
-    const pCtx = pCanvas.getContext('2d');
-    if (pCtx) {
-      pCtx.fillStyle = '#f0f0f0';
-      pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
-      pCtx.fillStyle = '#ddd';
-      pCtx.fillRect(0, 0, patternSize, patternSize);
-      pCtx.fillRect(patternSize, patternSize, patternSize, patternSize);
-      const pattern = ctx.createPattern(pCanvas, 'repeat');
-      if (pattern) {
-        ctx.fillStyle = pattern;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!sharedPattern) {
+      const pCanvas = document.createElement('canvas');
+      pCanvas.width = PATTERN_SIZE * 2;
+      pCanvas.height = PATTERN_SIZE * 2;
+      const pCtx = pCanvas.getContext('2d');
+      if (pCtx) {
+        pCtx.fillStyle = '#f0f0f0';
+        pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
+        pCtx.fillStyle = '#ddd';
+        pCtx.fillRect(0, 0, PATTERN_SIZE, PATTERN_SIZE);
+        pCtx.fillRect(PATTERN_SIZE, PATTERN_SIZE, PATTERN_SIZE, PATTERN_SIZE);
+        sharedPattern = ctx.createPattern(pCanvas, 'repeat');
       }
+    }
+
+    if (sharedPattern) {
+      ctx.fillStyle = sharedPattern;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
     ctx.save();
@@ -110,34 +125,29 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
 
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDragging) return;
+
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+    }
+
+    // Persist the event properties we need, or calculate them now.
+    // We should calculate dx and dy synchronously so we have the latest mouse position.
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-    
-    // Reverse movement because we translate context, not image coords directly in standard intuition
-    // Actually, moving the image means changing the translation.
-    // However, since we apply rotation, moving X might mean moving Y visually if rotated 90deg.
-    // For simplicity in this lightweight editor, we translate before rotation in state, but logic above applies rotate first.
-    // Let's adjust: We want the user to drag the IMAGE.
-    
-    // Simplified logic: Just update raw x/y. The user adjusts visually.
-    // Note: Due to rotation context order above (translate center -> rotate -> scale -> translate pos), 
-    // dragging might feel 'rotated' if we don't account for it. 
-    // For a perfect UX we'd project the vector, but for this sticker tool, standard XY adjustment is usually acceptable or we just rotate 0/90/180/270.
-    
-    // If we only allow 90 degree increments, it's easier.
     
     const dx = clientX - dragStart.x;
     const dy = clientY - dragStart.y;
     
-    // Adjust dx/dy based on rotation to match mouse movement
-    let rotRad = (-rotation * Math.PI) / 180;
-    const rotatedDx = dx * Math.cos(rotRad) - dy * Math.sin(rotRad);
-    const rotatedDy = dx * Math.sin(rotRad) + dy * Math.cos(rotRad);
+    rafRef.current = requestAnimationFrame(() => {
+      let rotRad = (-rotation * Math.PI) / 180;
+      const rotatedDx = dx * Math.cos(rotRad) - dy * Math.sin(rotRad);
+      const rotatedDy = dx * Math.sin(rotRad) + dy * Math.cos(rotRad);
 
-    // Adjust for scale
-    setPosition({
-      x: rotatedDx / scale,
-      y: rotatedDy / scale
+      setPosition({
+        x: rotatedDx / scale,
+        y: rotatedDy / scale
+      });
+      rafRef.current = null;
     });
   };
 

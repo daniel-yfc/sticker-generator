@@ -101,4 +101,21 @@ describe('ProcessingView', () => {
     const progressNode = percentageNodes.find(node => /\d+%/.test(node.textContent || ''));
     expect(progressNode).toHaveTextContent('99%');
   });
+
+  it('handles edge case when t("processing_steps") returns a string instead of an array', () => {
+    const stringMockT = vi.fn((key: string) => {
+      if (key === 'processing_steps') return 'Loading...';
+      if (key === 'processing_title') return 'Processing Title';
+      return key;
+    });
+
+    render(<ProcessingView t={stringMockT} />);
+
+    expect(screen.getByText('Processing Title')).toBeInTheDocument();
+
+    // When "Loading..." is returned instead of an array,
+    // steps[0] resolves to the first character "L"
+    expect(screen.getByText('L')).toBeInTheDocument();
+    expect(screen.getByText('0%')).toBeInTheDocument();
+  });
 });

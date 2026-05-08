@@ -26,6 +26,12 @@ export class RateLimiter {
   private storageKey: string;
 
   constructor(config: RateLimitConfig) {
+    if (config.maxRequests <= 0) {
+      throw new Error('maxRequests must be positive');
+    }
+    if (config.windowMs <= 0) {
+      throw new Error('windowMs must be positive');
+    }
     this.config = {
       keyPrefix: 'rate_limit',
       ...config,

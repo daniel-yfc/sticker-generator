@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import React, { useState } from 'react';
 import { Download, RefreshCcw, Check, Wand2, Repeat } from 'lucide-react';
 import { StyleOption, StyleTranslation } from '../types';
@@ -27,7 +28,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ imageUrl, style, onReset,
       const newUrl = await removeBackgroundMagicWand(imageUrl);
       onImageUpdate(newUrl);
     } catch (error: unknown) {
-      console.error("Failed to apply magic wand:", error instanceof Error ? error.message : error);
+      logger.error("Failed to apply magic wand:", error instanceof Error ? error.message : error);
     } finally {
       setIsProcessing(false);
     }
