@@ -8,9 +8,11 @@ interface ImageEditorProps {
   t: (key: string) => string;
 }
 
+const PATTERN_SIZE = 20;
+let sharedPattern: CanvasPattern | null = null;
+
 const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel, t }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const patternRef = useRef<CanvasPattern | null>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -56,28 +58,27 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw transparent grid background
-    const patternSize = 20;
     // Base fill as fallback
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (!patternRef.current) {
+    if (!sharedPattern) {
       const pCanvas = document.createElement('canvas');
-      pCanvas.width = patternSize * 2;
-      pCanvas.height = patternSize * 2;
+      pCanvas.width = PATTERN_SIZE * 2;
+      pCanvas.height = PATTERN_SIZE * 2;
       const pCtx = pCanvas.getContext('2d');
       if (pCtx) {
         pCtx.fillStyle = '#f0f0f0';
         pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
         pCtx.fillStyle = '#ddd';
-        pCtx.fillRect(0, 0, patternSize, patternSize);
-        pCtx.fillRect(patternSize, patternSize, patternSize, patternSize);
-        patternRef.current = ctx.createPattern(pCanvas, 'repeat');
+        pCtx.fillRect(0, 0, PATTERN_SIZE, PATTERN_SIZE);
+        pCtx.fillRect(PATTERN_SIZE, PATTERN_SIZE, PATTERN_SIZE, PATTERN_SIZE);
+        sharedPattern = ctx.createPattern(pCanvas, 'repeat');
       }
     }
 
-    if (patternRef.current) {
-      ctx.fillStyle = patternRef.current;
+    if (sharedPattern) {
+      ctx.fillStyle = sharedPattern;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
