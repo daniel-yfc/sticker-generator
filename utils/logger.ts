@@ -1,6 +1,6 @@
 const isDev = () => {
   try {
-    // @ts-ignore
+
     if (import.meta.env && import.meta.env.DEV) {
       return true;
     }

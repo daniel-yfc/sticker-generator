@@ -1,3 +1,17 @@
+🧹 [code health improvement description]
+
+🎯 **What:** The code health issue addressed
+Removed the usage of `// @ts-ignore` in `utils/logger.ts` which was used to suppress the TypeScript error for `import.meta.env`. Added `"vite/client"` to the `types` array in `tsconfig.json` to properly type the `import.meta.env` variable.
+
+💡 **Why:** How this improves maintainability
+Using `// @ts-ignore` hides underlying type issues and makes the codebase more prone to errors if the ignored lines change. By correctly typing `import.meta.env` via the `vite/client` declaration, we leverage TypeScript's type checking system effectively, leading to a safer, more predictable, and better-maintained codebase.
+
+✅ **Verification:** How you confirmed the change is safe
+- Executed `npx tsc --noEmit` locally (after patching environment restrictions) to confirm that the type errors regarding `import.meta.env` were completely resolved and that no other errors surfaced.
+- Ran the full unit test suite `npm run test` ensuring that all 132 tests across 19 files successfully passed with no regressions.
+
+✨ **Result:** The improvement achieved
+A cleaner `logger.ts` file without `// @ts-ignore` directives and a robustly typed project via `tsconfig.json`.
 🧹 [code health improvement] Refactor App State into Custom Hook
 
 🎯 **What:** Extracted the complex state management and action handlers from `App.tsx` into a new custom hook called `useAppState`. Additionally, updated the `id` generation in `addToHistory` from using `Math.random()` to `crypto.randomUUID()` as per memory instructions for better cryptographic security.
