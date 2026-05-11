@@ -83,7 +83,7 @@ describe('geminiService', () => {
 
       expect(global.fetch).toHaveBeenCalledWith('/api/generate', expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('generated-image-base64')
+        body: expect.stringContaining('A'.repeat(100))
       }));
       expect(result).toBe('data:image/png;base64,generated-image-base64');
     });
@@ -143,12 +143,12 @@ describe('geminiService', () => {
 
     it('rejects if any sticker generation fails', async () => {
       // First call succeeds, second fails
-      // We need to reset the rate limiter or it will trigger. Wait, rate limiter is global in the test.
-      // Let's reset the rate limiter before the test.
-      vi.mocked(mockGenerateContent).mockClear();
-      mockGenerateContent
+      (global.fetch as any)
         .mockResolvedValueOnce({
-          candidates: [{ finishReason: 'STOP', content: { parts: [{ inlineData: { data: 'batch-img-data' } }] } }]
+          ok: true,
+          json: async () => ({
+            candidates: [{ finishReason: 'STOP', content: { parts: [{ inlineData: { data: 'batch-img-data' } }] } }]
+          })
         })
         .mockRejectedValueOnce(new Error('API Error'));
 
