@@ -63,6 +63,34 @@ describe('imageUtils', () => {
       expect(result.startsWith('data:image/png;base64,')).toBe(true);
     });
 
+    it('should reject if 2d context cannot be acquired', async () => {
+      // Temporarily mock getContext to return null
+      const originalGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = () => null;
+
+      try {
+        await expect(
+          removeBackgroundMagicWand('data:image/png;base64,mock')
+        ).rejects.toThrow('Failed to get 2d context');
+      } finally {
+        HTMLCanvasElement.prototype.getContext = originalGetContext;
+      }
+    });
+
+    it('should catch and reject errors during processing', async () => {
+      // Temporarily mock getContext to throw an error
+      const originalGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = () => { throw new Error('Simulated processing error'); };
+
+      try {
+        await expect(
+          removeBackgroundMagicWand('data:image/png;base64,mock')
+        ).rejects.toThrow('Simulated processing error');
+      } finally {
+        HTMLCanvasElement.prototype.getContext = originalGetContext;
+      }
+    });
+
     it('should reject invalid image URLs', async () => {
       await expect(
         removeBackgroundMagicWand('invalid-url')
