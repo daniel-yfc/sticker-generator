@@ -17,6 +17,11 @@ export interface RateLimitResult {
   resetTime: number;
 }
 
+interface RateLimitData {
+  count: number;
+  windowStart: number;
+}
+
 /**
  * Rate limiter class using token bucket algorithm
  * Prevents excessive API calls and protects against abuse
@@ -24,6 +29,7 @@ export interface RateLimitResult {
 export class RateLimiter {
   private config: RateLimitConfig;
   private storageKey: string;
+  private cache: Map<string, RateLimitData>;
 
   constructor(config: RateLimitConfig) {
     if (config.maxRequests <= 0) {
@@ -37,6 +43,7 @@ export class RateLimiter {
       ...config,
     };
     this.storageKey = `${this.config.keyPrefix}_${Date.now()}`;
+    this.cache = new Map<string, RateLimitData>();
   }
 
   /**
@@ -51,8 +58,11 @@ export class RateLimiter {
     const now = Date.now();
 
     try {
-      const stored = localStorage.getItem(key);
-      let data = stored ? JSON.parse(stored) : null;
+      let data = this.cache.get(key);
+      if (!data) {
+        const stored = localStorage.getItem(key);
+        data = stored ? JSON.parse(stored) : null;
+      }
 
       // Initialize or reset if window expired
       if (!data || now - data.windowStart >= this.config.windowMs) {
@@ -76,6 +86,7 @@ export class RateLimiter {
 
       // Increment count and save
       data.count++;
+      this.cache.set(key, data);
       localStorage.setItem(key, JSON.stringify(data));
 
       return {
@@ -103,6 +114,7 @@ export class RateLimiter {
   reset(identifier: string): void {
     const key = `${this.config.keyPrefix}_${identifier}`;
     try {
+      this.cache.delete(key);
       localStorage.removeItem(key);
       logger.info(`Rate limit reset for ${identifier}`);
     } catch (e) {
@@ -121,16 +133,20 @@ export class RateLimiter {
     const now = Date.now();
 
     try {
-      const stored = localStorage.getItem(key);
-      if (!stored) {
-        return {
-          allowed: true,
-          remaining: this.config.maxRequests,
-          resetTime: now + this.config.windowMs,
-        };
-      }
+      let data = this.cache.get(key);
 
-      const data = JSON.parse(stored);
+      if (!data) {
+        const stored = localStorage.getItem(key);
+        if (!stored) {
+          return {
+            allowed: true,
+            remaining: this.config.maxRequests,
+            resetTime: now + this.config.windowMs,
+          };
+        }
+        data = JSON.parse(stored);
+        this.cache.set(key, data);
+      }
       
       if (now - data.windowStart >= this.config.windowMs) {
         return {
@@ -163,4 +179,3 @@ export const stickerGenerationLimiter = new RateLimiter({
   windowMs: 60000,    // per minute
   keyPrefix: 'sticker_gen',
 });
-

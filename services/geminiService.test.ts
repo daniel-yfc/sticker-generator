@@ -83,7 +83,7 @@ describe('geminiService', () => {
 
       expect(global.fetch).toHaveBeenCalledWith('/api/generate', expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('generated-image-base64')
+        body: expect.stringContaining('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
       }));
       expect(result).toBe('data:image/png;base64,generated-image-base64');
     });
@@ -145,11 +145,15 @@ describe('geminiService', () => {
       // First call succeeds, second fails
       // We need to reset the rate limiter or it will trigger. Wait, rate limiter is global in the test.
       // Let's reset the rate limiter before the test.
-      vi.mocked(mockGenerateContent).mockClear();
-      mockGenerateContent
-        .mockResolvedValueOnce({
+      const mockResponseOk = {
+        ok: true,
+        json: async () => ({
           candidates: [{ finishReason: 'STOP', content: { parts: [{ inlineData: { data: 'batch-img-data' } }] } }]
         })
+      };
+
+      (global.fetch as any)
+        .mockResolvedValueOnce(mockResponseOk)
         .mockRejectedValueOnce(new Error('API Error'));
 
       const variations = ['var1', 'var2'];
