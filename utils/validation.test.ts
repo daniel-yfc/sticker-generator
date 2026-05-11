@@ -107,8 +107,10 @@ describe('validation utilities', () => {
 
     it('should reject invalid JSON data', () => {
       const result = validateLocalStorageData('test', 'not valid json{');
-      expect(result.valid).toBe(false);
-      expect(result.error).toContain('Invalid JSON');
+      expect(result).toEqual({
+        valid: false,
+        error: 'Invalid JSON data'
+      });
     });
 
     it('should reject data exceeding size limit', () => {
