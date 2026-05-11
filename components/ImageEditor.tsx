@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import Button from './Button';
 import { RotateCw, ZoomIn, Move, Check, X } from 'lucide-react';
 
 interface ImageEditorProps {
@@ -210,21 +211,23 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel
         </div>
 
         <div className="flex justify-between gap-4">
-          <button
+          <Button
             onClick={() => setRotation(r => (r - 90) % 360)}
-            className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 flex items-center justify-center gap-2"
+            variant="secondary"
+            className="flex-1 py-2 rounded-lg text-sm"
           >
             <RotateCw className="w-4 h-4" />
             {t('editor_rotate')}
-          </button>
+          </Button>
           
-          <button
+          <Button
             onClick={handleConfirm}
-            className="flex-[2] py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md shadow-indigo-200 flex items-center justify-center gap-2"
+            variant="primary"
+            className="flex-[2] py-2 rounded-lg"
           >
             <Check className="w-4 h-4" />
             {t('editor_btn_confirm')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

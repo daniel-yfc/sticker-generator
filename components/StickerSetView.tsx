@@ -1,5 +1,6 @@
 
 import React from 'react';
+import Button from './Button';
 import { Download, RefreshCcw, Check } from 'lucide-react';
 import { StyleOption } from '../types';
 import { downloadImage } from '../utils/download';
@@ -33,20 +34,22 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({ stickers, style, onRese
             <p className="text-indigo-600 text-xs font-bold mt-1 uppercase tracking-wider">{t('result_style_label')}: {styleName}</p>
           </div>
           <div className="flex gap-3">
-             <button
+             <Button
               onClick={onReset}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+              variant="secondary"
+              className="py-2"
             >
               <RefreshCcw className="w-4 h-4" />
               {t('btn_reset')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleDownloadAll}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-md"
+              variant="primary"
+              className="py-2"
             >
               <Download className="w-4 h-4" />
               {t('btn_download')}
-            </button>
+            </Button>
           </div>
         </div>
 

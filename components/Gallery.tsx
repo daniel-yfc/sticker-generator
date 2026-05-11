@@ -1,5 +1,6 @@
 
 import React, { useCallback } from 'react';
+import Button from './Button';
 import { GALLERY_ITEMS } from '../constants';
 import { GalleryItem, StyleTranslation } from '../types';
 import { Palette, PlayCircle, DownloadCloud } from 'lucide-react';
@@ -50,23 +51,25 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectStyle, t, stylesTranslation }
                 
                 {/* Overlay on hover */}
                 <div className="absolute inset-0 bg-indigo-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3 p-4">
-                  <button 
-                    onClick={handleTryStyle}
+                  <Button
+                    onClick={handleTryStyle as any}
                     data-styleid={item.styleId}
-                    className="w-full bg-white text-indigo-600 px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 shadow-xl hover:scale-105"
+                    variant="secondary"
+                    className="w-full py-2.5 rounded-2xl text-sm transform translate-y-4 group-hover:translate-y-0 duration-300 shadow-xl hover:scale-105 bg-white text-indigo-600 hover:bg-gray-50"
                   >
                     <PlayCircle className="w-5 h-5" />
                     {t('gallery_btn_try')}
-                  </button>
-                  <button 
-                    onClick={handleImportSample}
+                  </Button>
+                  <Button
+                    onClick={handleImportSample as any}
                     data-styleid={item.styleId}
                     data-url={item.imageUrl}
-                    className="w-full bg-indigo-600 text-white px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500 shadow-xl hover:bg-indigo-700 hover:scale-105"
+                    variant="primary"
+                    className="w-full py-2.5 rounded-2xl text-sm transform translate-y-4 group-hover:translate-y-0 duration-500 shadow-xl hover:scale-105"
                   >
                     <DownloadCloud className="w-5 h-5" />
                     {t('gallery_btn_import')}
-                  </button>
+                  </Button>
                 </div>
               </div>
 

@@ -1,5 +1,6 @@
 import { logger } from "../utils/logger";
 import React, { useState } from 'react';
+import Button from './Button';
 import { Download, RefreshCcw, Check, Wand2, Repeat } from 'lucide-react';
 import { StyleOption, StyleTranslation } from '../types';
 import { downloadImage } from '../utils/download';
@@ -79,27 +80,30 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ imageUrl, style, onReset,
         </div>
 
         <div className="flex flex-wrap justify-center gap-3 mt-8 w-full max-w-lg">
-          <button
+          <Button
             onClick={onReuse}
-            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-medium transition-colors border border-indigo-100"
+            variant="outline"
+            className="flex-1 min-w-[140px]"
           >
             <Repeat className="w-5 h-5" />
             {t('btn_reuse')}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onReset}
-            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+            variant="secondary"
+            className="flex-1 min-w-[140px]"
           >
             <RefreshCcw className="w-5 h-5" />
             {t('btn_reset')}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleDownload}
-            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-0.5"
+            variant="primary"
+            className="flex-1 min-w-[140px]"
           >
             <Download className="w-5 h-5" />
             {t('btn_download')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,1 +1,1 @@
-// checking if there is a script or something
+// run_submit

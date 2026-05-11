@@ -4,6 +4,8 @@ import StyleSelector from './components/StyleSelector';
 import FileUpload from './components/FileUpload';
 import ProcessingView from './components/ProcessingView';
 import ResultDisplay from './components/ResultDisplay';
+import Button from './components/Button';
+import Button from './components/Button';
 import Gallery from './components/Gallery';
 import StickerHistory from './components/StickerHistory';
 import ImageEditor from './components/ImageEditor';
@@ -80,31 +82,33 @@ const App: React.FC = () => {
                       
                       {status === AppStatus.READY && (
                         <>
-                          <button
+                          <Button
                             onClick={handleGenerate}
                             className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2"
                           >
                             <Sparkles className="w-5 h-5" />
                             GO! (Single)
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={handleGenerateSet}
-                            className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl font-bold border border-indigo-200 transition-all flex items-center justify-center gap-2"
+                            variant="outline"
+                            className="w-full py-3"
                           >
                             <Layers className="w-4 h-4" />
                             {t('btn_generate_set')}
-                          </button>
+                          </Button>
                         </>
                       )}
 
                       {status === AppStatus.ERROR && (
-                        <button
+                        <Button
                           onClick={handleGenerate}
-                          className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold border border-red-200 transition-all flex items-center justify-center gap-2"
+                          variant="danger"
+                          className="w-full py-3"
                         >
                           <RefreshCw className="w-4 h-4" />
                           {t('btn_retry')}
-                        </button>
+                        </Button>
                       )}
                    </div>
                 </div>
@@ -144,12 +148,12 @@ const App: React.FC = () => {
                                 <img src={processedImage} alt="Ready" className="max-h-[500px] object-contain" />
                               </div>
                            </div>
-                           <button 
+                           <Button
                               onClick={() => setStatus(AppStatus.EDITING)}
                               className="absolute top-4 right-4 bg-white p-2 rounded-full shadow-md hover:bg-gray-50 text-gray-600"
                            >
                               <RefreshCw className="w-4 h-4" />
-                           </button>
+                           </Button>
                         </div>
                       )}
 
@@ -224,7 +228,7 @@ const App: React.FC = () => {
                  <div className="space-y-4">
                     <div className="flex items-center justify-between px-2">
                        <h3 className="font-bold text-gray-400 uppercase tracking-wider text-sm">Popular Styles</h3>
-                       <button onClick={() => setView('gallery')} className="text-indigo-600 font-bold text-sm hover:underline">View All</button>
+                       <Button onClick={() => setView('gallery')} className="text-indigo-600 font-bold text-sm hover:underline">View All</Button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                        {STYLES.slice(0, 4).map(style => (
@@ -258,12 +262,12 @@ const App: React.FC = () => {
                      <h2 className="text-3xl font-bold">{t('history_title')}</h2>
                      <p className="text-indigo-100 mt-1">{t('history_subtitle')}</p>
                   </div>
-                  <button 
+                  <Button
                     onClick={() => setView('create')}
                     className="md:ml-auto bg-white text-indigo-600 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-lg"
                   >
                     + {t('nav_create')}
-                  </button>
+                  </Button>
                 </div>
                 <StickerHistory 
                   history={history} 

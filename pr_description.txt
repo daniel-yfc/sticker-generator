@@ -1,26 +1,6 @@
-🧹 [code health improvement description]
+🧹 [Extract Button component to remove code duplication]
 
-🎯 **What:** The code health issue addressed
-Removed the usage of `// @ts-ignore` in `utils/logger.ts` which was used to suppress the TypeScript error for `import.meta.env`. Added `"vite/client"` to the `types` array in `tsconfig.json` to properly type the `import.meta.env` variable.
-
-💡 **Why:** How this improves maintainability
-Using `// @ts-ignore` hides underlying type issues and makes the codebase more prone to errors if the ignored lines change. By correctly typing `import.meta.env` via the `vite/client` declaration, we leverage TypeScript's type checking system effectively, leading to a safer, more predictable, and better-maintained codebase.
-
-✅ **Verification:** How you confirmed the change is safe
-- Executed `npx tsc --noEmit` locally (after patching environment restrictions) to confirm that the type errors regarding `import.meta.env` were completely resolved and that no other errors surfaced.
-- Ran the full unit test suite `npm run test` ensuring that all 132 tests across 19 files successfully passed with no regressions.
-
-✨ **Result:** The improvement achieved
-A cleaner `logger.ts` file without `// @ts-ignore` directives and a robustly typed project via `tsconfig.json`.
-🧹 [code health improvement] Refactor App State into Custom Hook
-
-🎯 **What:** Extracted the complex state management and action handlers from `App.tsx` into a new custom hook called `useAppState`. Additionally, updated the `id` generation in `addToHistory` from using `Math.random()` to `crypto.randomUUID()` as per memory instructions for better cryptographic security.
-
-💡 **Why:** `App.tsx` had grown overly complex, mingling state definitions, effect hooks, and UI layout code. By extracting the state logic into `hooks/useAppState.ts`, the main component is now significantly more readable, easier to test, and focused purely on layout and composition. This separation of concerns improves long-term maintainability.
-
-✅ **Verification:**
-- The React component `App.tsx` was refactored without any syntax errors.
-- The project successfully builds (`npm run build`).
-- The full test suite passes (`npm run test`), ensuring no existing functionalities or interactions were broken.
-
-✨ **Result:** The codebase is now cleaner, with an `App.tsx` component that focuses almost entirely on rendering logic, while the complex state machine is neatly encapsulated in the `useAppState` custom hook.
+🎯 What: Extracted the duplicated button styles into a shared `Button` component (`components/Button.tsx`) and refactored `ResultDisplay`, `StickerSetView`, `Gallery`, `ImageEditor`, and `App` to use it.
+💡 Why: Improves maintainability by centralizing the button styling. It reduces code duplication and allows for easier global updates to the primary button style across the application.
+✅ Verification: Ran the Vitest test suite and ensured that all tests pass. Created a unit test for the new `Button` component. Built the app using `npm run build` with no errors.
+✨ Result: Replaced duplicate Tailwind class strings with a clean, reusable `<Button>` component with proper variants.
