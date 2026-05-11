@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import ResultDisplay from './ResultDisplay';
@@ -7,6 +8,15 @@ import { removeBackgroundMagicWand } from '../utils/imageUtils';
 // Mock utilities
 vi.mock('../utils/download', () => ({
   downloadImage: vi.fn(),
+}));
+
+vi.mock('../utils/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    log: vi.fn(),
+  }
 }));
 
 vi.mock('../utils/imageUtils', () => ({
@@ -85,6 +95,20 @@ describe('ResultDisplay', () => {
 
     await waitFor(() => {
       expect(mockProps.onImageUpdate).toHaveBeenCalledWith(mockNewUrl);
+    });
+  });
+
+  it('logs an error when magic wand fails', async () => {
+    const mockError = new Error('Magic wand failed');
+    vi.mocked(removeBackgroundMagicWand).mockRejectedValue(mockError);
+
+    render(<ResultDisplay {...mockProps} />);
+
+    const wandBtn = screen.getByTitle('btn_magic_wand');
+    fireEvent.click(wandBtn);
+
+    await waitFor(() => {
+      expect(logger.error).toHaveBeenCalledWith('Failed to apply magic wand:', 'Magic wand failed');
     });
   });
 });
