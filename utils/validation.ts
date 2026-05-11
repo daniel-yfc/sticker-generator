@@ -160,10 +160,10 @@ export function sanitizeErrorMessage(message: string): string {
  * @param item - Object to validate
  * @returns boolean indicating if the object is a valid StickerRecord
  */
-export function isValidStickerRecord(item: any): item is StickerRecord {
+export function isValidStickerRecord(item: unknown): item is StickerRecord {
   if (!item || typeof item !== 'object') return false;
 
-  const { id, imageUrl, styleId, timestamp, sourceImageId } = item;
+  const { id, imageUrl, styleId, timestamp, sourceImageId } = item as Record<string, unknown>;
 
   // Basic type checks
   if (typeof id !== 'string' || id.length === 0) return false;
@@ -195,7 +195,7 @@ export function isValidStickerRecord(item: any): item is StickerRecord {
  * @param data - Parsed JSON data from localStorage
  * @returns Array of valid StickerRecord objects
  */
-export function validateHistory(data: any): StickerRecord[] {
+export function validateHistory(data: unknown): StickerRecord[] {
   if (!Array.isArray(data)) {
     logger.warn('History data is not an array, returning empty history');
     return [];
