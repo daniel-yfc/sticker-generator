@@ -52,7 +52,14 @@ export const useAppState = () => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    const timeoutId = setTimeout(() => {
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      } catch (error: unknown) {
+        logger.error("Failed to save history", error instanceof Error ? error.message : error);
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
   }, [history]);
 
   const addToHistory = useCallback((items: { imageUrl: string; styleId: number }[]) => {
