@@ -56,7 +56,8 @@ let dailyWindowStart = todayUTCKey();
 
 function todayUTCKey() {
   const d = new Date();
-  return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
+  // getUTCMonth() is 0-based — add 1 to avoid key collision across month boundaries
+  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
 }
 
 function checkAndIncrementDailyQuota() {
@@ -133,19 +134,24 @@ const server = http.createServer((req, res) => {
     // GP55-003: enforce body size limit
     let body = '';
     let bodyBytes = 0;
+    let bodyTooLarge = false;
 
     req.on('data', chunk => {
+      if (bodyTooLarge) return;
       bodyBytes += chunk.length;
       if (bodyBytes > MAX_BODY_BYTES) {
-        req.destroy();
+        bodyTooLarge = true;
         res.writeHead(413, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'error_payload', detail: 'Request body too large.' }));
+        req.destroy();
         return;
       }
       body += chunk.toString();
     });
 
     req.on('end', () => {
+      if (bodyTooLarge) return;
+
       try {
         const payload = JSON.parse(body);
 
