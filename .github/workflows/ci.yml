@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  build-and-test:
+    name: Typecheck · Test · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint (if eslint config present)
+        run: |
+          if [ -f "eslint.config.js" ] || [ -f ".eslintrc.js" ] || [ -f ".eslintrc.cjs" ]; then
+            npx eslint . --max-warnings=0
+          else
+            echo "No ESLint config found — skipping (add eslint.config.js to enable, see CO4-029)"
+          fi
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npx vite build
+        env:
+          # Vite needs these defined at build time even if empty for type-safe env handling
+          VITE_API_BASE_URL: ''
