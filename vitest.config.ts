@@ -11,6 +11,20 @@ export default defineConfig({
       deps: {
         inline: ['vitest-canvas-mock']
       }
-    }
+    },
+    exclude: [
+      '**/node_modules/**',
+      '**/tests/server.*.test.cjs',
+    ],
+    projects: [
+      {
+        test: {
+          name: 'server',
+          include: ['tests/server.*.test.cjs'],
+          environment: 'node',
+          globals: true,
+        },
+      },
+    ],
   },
 });
