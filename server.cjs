@@ -84,8 +84,6 @@ const MAX_BODY_BYTES = 15 * 1024 * 1024;
 // ---------------------------------------------------------------------------
 const DEFAULT_MODEL = 'gemini-2.5-flash-image';
 
-// CO4-009 / GP55-009: Canonical variation fragments.
-// Client sends a VariationId string; server maps it here.
 const VARIATION_FRAGMENTS = {
   thumbs_up: 'Expression/Action: giving a thumbs up, cheerful.',
   laughing:  'Expression/Action: laughing heartily, mouth open, joyful.',
@@ -96,8 +94,6 @@ const VARIATION_FRAGMENTS = {
 
 const VALID_VARIATION_IDS = new Set(Object.keys(VARIATION_FRAGMENTS));
 
-// GP55-009: Style base prompts — server-owned authoritative table.
-// Keys must match StyleOption.id values in constants.ts.
 const STYLE_PROMPTS = {
   'chibi-anime':    { base: 'Chibi anime style, big expressive eyes, simplified cute proportions, vibrant colors', person: 'adorable chibi character' },
   'pixar-3d':       { base: 'Pixar/Disney 3D animation style, smooth surfaces, expressive face, warm lighting', person: 'charming 3D animated character' },
@@ -115,10 +111,6 @@ const STYLE_PROMPTS = {
 
 const VALID_STYLE_IDS = new Set(Object.keys(STYLE_PROMPTS));
 
-/**
- * GP55-001 / GP55-009: Build the Gemini prompt server-side.
- * Client only provides styleId + variationId — no raw prompt injection possible.
- */
 function buildPrompt(styleId, variationId) {
   const style = STYLE_PROMPTS[styleId];
   const variationFragment = VARIATION_FRAGMENTS[variationId] || VARIATION_FRAGMENTS.default;
@@ -141,7 +133,7 @@ ${variationFragment}`;
 // ---------------------------------------------------------------------------
 // GP55-006: Server-side image validation (magic bytes, size, dimensions)
 // ---------------------------------------------------------------------------
-const MAX_IMAGE_BYTES_DECODED = 10 * 1024 * 1024; // 10 MB
+const MAX_IMAGE_BYTES_DECODED = 10 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 4096;
 
 function detectMimeFromBytes(buf) {
@@ -163,6 +155,7 @@ function getImageDimensions(buf, mimeType) {
         if (buf[i] !== 0xFF) break;
         const marker = buf[i + 1];
         const len = buf.readUInt16BE(i + 2);
+        if (len < 2) break;
         if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7) ||
             (marker >= 0xC9 && marker <= 0xCB) || (marker >= 0xCD && marker <= 0xCF)) {
           return { width: buf.readUInt16BE(i + 7), height: buf.readUInt16BE(i + 5) };
@@ -170,7 +163,6 @@ function getImageDimensions(buf, mimeType) {
         i += 2 + len;
       }
     }
-    // WebP dimension parsing omitted — returns safe default (no block)
     return { width: 0, height: 0 };
   } catch {
     return { width: 0, height: 0 };
@@ -206,160 +198,163 @@ function validateImage(base64Data) {
 }
 
 // ---------------------------------------------------------------------------
-// Server
+// Server factory — exported for test harness
 // ---------------------------------------------------------------------------
-const server = http.createServer((req, res) => {
-  const origin = req.headers['origin'];
+function createApp() {
+  return http.createServer((req, res) => {
+    const origin = req.headers['origin'];
 
-  if (isOriginAllowed(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-  } else if (origin) {
-    if (req.method === 'OPTIONS') {
-      res.writeHead(403);
-      res.end('Forbidden');
-      return;
-    }
-  }
-
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204);
-    res.end();
-    return;
-  }
-
-  if (req.method === 'POST' && req.url === '/api/generate') {
-    if (!generationEnabled()) {
-      res.writeHead(503, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'error_process', detail: 'Generation is currently disabled.' }));
-      return;
-    }
-
-    if (!checkAndIncrementDailyQuota()) {
-      res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '3600' });
-      res.end(JSON.stringify({ error: 'error_quota', detail: 'Daily generation limit reached.' }));
-      return;
-    }
-
-    let body = '';
-    let bodyBytes = 0;
-    let bodyTooLarge = false;
-
-    req.on('data', chunk => {
-      if (bodyTooLarge) return;
-      bodyBytes += chunk.length;
-      if (bodyBytes > MAX_BODY_BYTES) {
-        bodyTooLarge = true;
-        res.writeHead(413, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'error_payload', detail: 'Request body too large.' }));
-        req.destroy();
+    if (isOriginAllowed(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    } else if (origin) {
+      if (req.method === 'OPTIONS') {
+        res.writeHead(403);
+        res.end('Forbidden');
         return;
       }
-      body += chunk.toString();
-    });
+    }
 
-    req.on('end', () => {
-      if (bodyTooLarge) return;
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-      try {
-        const payload = JSON.parse(body);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
 
-        // GP55-001: strict contract — only {imageBase64, styleId, variationId} accepted
-        const { imageBase64, styleId, variationId } = payload;
-
-        if (!imageBase64 || typeof imageBase64 !== 'string') {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'error_payload', detail: 'Missing imageBase64.' }));
-          return;
-        }
-
-        if (!styleId || !VALID_STYLE_IDS.has(styleId)) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'error_payload', detail: `Unknown styleId: ${styleId}` }));
-          return;
-        }
-
-        // CO4-009: unknown variationId silently falls back to 'default'
-        const safeVariationId = VALID_VARIATION_IDS.has(variationId) ? variationId : 'default';
-
-        // GP55-006: server-side image validation
-        let validatedMimeType;
-        let cleanBase64;
-        try {
-          cleanBase64 = imageBase64.startsWith('data:')
-            ? imageBase64.slice(imageBase64.indexOf(',') + 1)
-            : imageBase64;
-          const result = validateImage(cleanBase64);
-          validatedMimeType = result.mimeType;
-        } catch (validationError) {
-          res.writeHead(validationError.status || 400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: validationError.code || 'error_payload', detail: validationError.detail }));
-          return;
-        }
-
-        // GP55-001 / GP55-009: build prompt server-side
-        const prompt = buildPrompt(styleId, safeVariationId);
-
-        const googlePayload = JSON.stringify({
-          contents: {
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType: validatedMimeType, data: cleanBase64 } }
-            ]
-          },
-          generationConfig: { imageConfig: { aspectRatio: '1:1' } }
-        });
-
-        const options = {
-          hostname: 'generativelanguage.googleapis.com',
-          port: 443,
-          path: `/v1beta/models/${DEFAULT_MODEL}:generateContent`,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(googlePayload),
-            'x-goog-api-key': API_KEY
-          }
-        };
-
-        const googleReq = https.request(options, (googleRes) => {
-          res.writeHead(googleRes.statusCode, { 'Content-Type': 'application/json' });
-          googleRes.pipe(res);
-        });
-
-        googleReq.on('error', (e) => {
-          console.error('Google API Request Error:', e);
-          if (!res.headersSent) {
-            res.writeHead(500);
-            res.end(JSON.stringify({ error: 'error_process' }));
-          }
-        });
-
-        googleReq.write(googlePayload);
-        googleReq.end();
-
-      } catch (e) {
-        console.error('Error parsing request body:', e);
-        if (!res.headersSent) {
-          res.writeHead(400);
-          res.end(JSON.stringify({ error: 'error_payload', detail: 'Invalid JSON.' }));
-        }
+    if (req.method === 'POST' && req.url === '/api/generate') {
+      if (!generationEnabled()) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'error_process', detail: 'Generation is currently disabled.' }));
+        return;
       }
-    });
-  } else {
-    res.writeHead(404);
-    res.end('Not Found');
-  }
-});
 
-const PORT = process.env.BACKEND_PORT || 3001;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend proxy server running on http://0.0.0.0:${PORT}`);
-  console.log(`Generation enabled: ${generationEnabled()}`);
-  console.log(`Daily quota limit: ${DAILY_QUOTA_LIMIT}`);
-  console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || '(none — set FRONTEND_ORIGIN env)'}`);
-  console.log(`Valid styles: ${[...VALID_STYLE_IDS].join(', ')}`);
-});
+      if (!checkAndIncrementDailyQuota()) {
+        res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '3600' });
+        res.end(JSON.stringify({ error: 'error_quota', detail: 'Daily generation limit reached.' }));
+        return;
+      }
+
+      let body = '';
+      let bodyBytes = 0;
+      let bodyTooLarge = false;
+
+      req.on('data', chunk => {
+        if (bodyTooLarge) return;
+        bodyBytes += chunk.length;
+        if (bodyBytes > MAX_BODY_BYTES) {
+          bodyTooLarge = true;
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'error_payload', detail: 'Request body too large.' }));
+          req.destroy();
+          return;
+        }
+        body += chunk.toString();
+      });
+
+      req.on('end', () => {
+        if (bodyTooLarge) return;
+
+        try {
+          const payload = JSON.parse(body);
+          const { imageBase64, styleId, variationId } = payload;
+
+          if (!imageBase64 || typeof imageBase64 !== 'string') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'error_payload', detail: 'Missing imageBase64.' }));
+            return;
+          }
+
+          if (!styleId || !VALID_STYLE_IDS.has(styleId)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'error_payload', detail: `Unknown styleId: ${styleId}` }));
+            return;
+          }
+
+          const safeVariationId = VALID_VARIATION_IDS.has(variationId) ? variationId : 'default';
+
+          let validatedMimeType;
+          let cleanBase64;
+          try {
+            cleanBase64 = imageBase64.startsWith('data:')
+              ? imageBase64.slice(imageBase64.indexOf(',') + 1)
+              : imageBase64;
+            const result = validateImage(cleanBase64);
+            validatedMimeType = result.mimeType;
+          } catch (validationError) {
+            res.writeHead(validationError.status || 400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: validationError.code || 'error_payload', detail: validationError.detail }));
+            return;
+          }
+
+          const prompt = buildPrompt(styleId, safeVariationId);
+
+          const googlePayload = JSON.stringify({
+            contents: {
+              parts: [
+                { text: prompt },
+                { inlineData: { mimeType: validatedMimeType, data: cleanBase64 } }
+              ]
+            },
+            generationConfig: { imageConfig: { aspectRatio: '1:1' } }
+          });
+
+          const options = {
+            hostname: 'generativelanguage.googleapis.com',
+            port: 443,
+            path: `/v1beta/models/${DEFAULT_MODEL}:generateContent`,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(googlePayload),
+              'x-goog-api-key': API_KEY
+            }
+          };
+
+          const googleReq = https.request(options, (googleRes) => {
+            res.writeHead(googleRes.statusCode, { 'Content-Type': 'application/json' });
+            googleRes.pipe(res);
+          });
+
+          googleReq.on('error', (e) => {
+            console.error('Google API Request Error:', e);
+            if (!res.headersSent) {
+              res.writeHead(500);
+              res.end(JSON.stringify({ error: 'error_process' }));
+            }
+          });
+
+          googleReq.write(googlePayload);
+          googleReq.end();
+
+        } catch (e) {
+          console.error('Error parsing request body:', e);
+          if (!res.headersSent) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: 'error_payload', detail: 'Invalid JSON.' }));
+          }
+        }
+      });
+    } else {
+      res.writeHead(404);
+      res.end('Not Found');
+    }
+  });
+}
+
+// Allow test harness to import without triggering listen
+if (require.main === module) {
+  const PORT = process.env.BACKEND_PORT || 3001;
+  const server = createApp();
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Backend proxy server running on http://0.0.0.0:${PORT}`);
+    console.log(`Generation enabled: ${generationEnabled()}`);
+    console.log(`Daily quota limit: ${DAILY_QUOTA_LIMIT}`);
+    console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || '(none — set FRONTEND_ORIGIN env)'}`);
+    console.log(`Valid styles: ${[...VALID_STYLE_IDS].join(', ')}`);
+  });
+}
+
+module.exports = { createApp };
