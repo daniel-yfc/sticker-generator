@@ -4,6 +4,7 @@ import { STYLES, STYLES_MAP, TRANSLATIONS } from '../constants';
 import { logger } from '../utils/logger';
 import { validateHistory } from '../utils/validation';
 import { generateSticker, generateStickerSet } from '../services/geminiService';
+import { VariationId } from '../utils/promptBuilder';
 
 const HISTORY_KEY = 'sticker_maker_history_v2';
 
@@ -152,7 +153,8 @@ export const useAppState = () => {
     }, 70000);
 
     try {
-      const resultImage = await generateSticker(processedImage, selectedStyle);
+      // GP55-001: pass slug (server-owned identity) instead of StyleOption object
+      const resultImage = await generateSticker(processedImage, selectedStyle.slug);
 
       const img = new Image();
       img.onload = () => {
@@ -186,15 +188,12 @@ export const useAppState = () => {
     setErrorMessage(null);
     setGeneratedSet([]);
 
-    const variations = [
-      "giving a friendly thumbs up with a big smile",
-      "looking very happy and laughing joyfully",
-      "looking surprised with wide eyes and open mouth",
-      "looking cool wearing stylish sunglasses"
-    ];
+    // CO4-009: use canonical VariationId values — free-text strings are not valid
+    const variations: VariationId[] = ['thumbs_up', 'laughing', 'surprised', 'cool'];
 
     try {
-      const results = await generateStickerSet(processedImage, selectedStyle, variations);
+      // GP55-001: pass slug instead of StyleOption object
+      const results = await generateStickerSet(processedImage, selectedStyle.slug, variations);
       addToHistory(results.map(imgUrl => ({ imageUrl: imgUrl, styleId: selectedStyle.id })));
       setGeneratedSet(results);
       setStatus(AppStatus.SET_SUCCESS);

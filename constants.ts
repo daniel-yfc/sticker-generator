@@ -1,4 +1,3 @@
-
 import { StyleOption, GalleryItem, Language, TranslationContent } from './types';
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -6,6 +5,7 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const STYLES: StyleOption[] = [
   {
     id: 1,
+    slug: 'flat-vector',
     style: "Flat Vector Art",
     basePrompt: "Professional Flat Vector Art. Crisp geometric shapes, Adobe Illustrator precision, clean bold outlines, vibrant solid color blocks, minimal cel-shading, high-end commercial graphic design.",
     modifiers: {
@@ -18,6 +18,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 2,
+    slug: 'marker',
     style: "Marker Illustration",
     basePrompt: "Professional Copic Marker Illustration. Saturated alcohol ink texture, heavy ink outlines, expressive hand-drawn strokes, sketchbook aesthetic, organic ink bleeding effects.",
     modifiers: {
@@ -30,6 +31,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 3,
+    slug: 'minimalist',
     style: "Minimalist Flat Design",
     basePrompt: "Ultra-Minimalist Ligne Claire. Hergé aesthetic, uniform technical line weight, absolute flat pastel tints, zero gradients, zero shadows, architectural simplification.",
     modifiers: {
@@ -42,6 +44,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 4,
+    slug: 'risograph',
     style: "Risograph Print",
     basePrompt: "Authentic Risograph Print. Vibrant soy-based ink overlaps, visible halftone dot patterns, intentional color layer misregistration (CMYK offset), heavy grain texture.",
     modifiers: {
@@ -54,6 +57,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 5,
+    slug: 'pixar-3d',
     style: "3D Stylized Render",
     basePrompt: "High-End 3D Stylized Render. Disney-Pixar movie still, Octane Render, subsurface scattering, matte plastic toy finish, volumetric rim lighting, soft ambient occlusion.",
     modifiers: {
@@ -66,6 +70,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 6,
+    slug: 'watercolor',
     style: "Watercolor Illustration",
     basePrompt: "Traditional Watercolor Wash. Professional wet-on-wet technique, organic pigment blooms, artistic granulation, soft paint bleeds, 300gsm cold-press textured paper.",
     modifiers: {
@@ -78,6 +83,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 7,
+    slug: 'neon-cyberpunk',
     style: "Cyberpunk Mecha",
     basePrompt: "Cyberpunk Mecha-Core. Intricate robotic greeble details, glowing neon circuits, carbon fiber and brushed metal surfaces, futuristic HUD overlay, tactical sci-fi aesthetic.",
     modifiers: {
@@ -90,6 +96,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 8,
+    slug: 'comic-book',
     style: "American Comic Art",
     basePrompt: "Modern Age American Comic. Aggressive black ink brushwork, dynamic foreshortening, Ben-Day dots shading, cinematic high-contrast lighting, bold primary palette.",
     modifiers: {
@@ -102,6 +109,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 9,
+    slug: 'sketch',
     style: "Colored Pencil Sketch",
     basePrompt: "Detailed Colored Pencil Sketch. Prismacolor texture, dense cross-hatching, burnished wax finish, visible paper tooth, handcrafted warmth.",
     modifiers: {
@@ -114,6 +122,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 10,
+    slug: 'retro-cartoon',
     style: "1930s Animation",
     basePrompt: "1930s Rubber Hose Animation. Fleischer Studios style, bouncy ink-blot characters, pie-cut eyes, vintage film grain and scratches, monochrome.",
     modifiers: {
@@ -126,6 +135,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 11,
+    slug: 'noir',
     style: "Noir Graphic Novel",
     basePrompt: "Noir Graphic Novel. Extreme Chiaroscuro lighting, stark ink silhouettes, heavy dramatic shadows, Sin City aesthetic, gritty urban atmosphere.",
     modifiers: {
@@ -138,6 +148,7 @@ export const STYLES: StyleOption[] = [
   },
   {
     id: 12,
+    slug: 'oil-painting',
     style: "Impasto Oil Painting",
     basePrompt: "Heavy Impasto Oil Painting. Thick palette knife strokes, rhythmic brush textures, vibrant color dabs, post-impressionist energy, museum-quality canvas relief.",
     modifiers: {

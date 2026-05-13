@@ -1,4 +1,3 @@
-
 export interface StyleModifiers {
   person: string;
   object: string;
@@ -7,6 +6,7 @@ export interface StyleModifiers {
 
 export interface StyleOption {
   id: number;
+  slug: string;
   style: string;
   basePrompt: string;
   modifiers: StyleModifiers;
@@ -20,9 +20,9 @@ export enum AppStatus {
   READY = 'ready',
   UPLOADING = 'uploading',
   PROCESSING = 'processing',
-  SET_PROCESSING = 'set_processing', // New: Processing a batch set
+  SET_PROCESSING = 'set_processing',
   SUCCESS = 'success',
-  SET_SUCCESS = 'set_success',       // New: Displaying a batch set
+  SET_SUCCESS = 'set_success',
   ERROR = 'error',
 }
 
