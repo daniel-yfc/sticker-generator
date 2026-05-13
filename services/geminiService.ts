@@ -37,10 +37,13 @@ function checkRateLimit(): void {
 function extractImageFromResponse(response: GeminiGenerateContentResponse): string {
   if (response.error) {
     logger.error('Gemini API Error details:', response.error);
-    // Never expose raw upstream message — CO4-013 pre-req
+    // Never expose raw upstream error — use known code only (CO4-013 pre-req)
     throw new Error('error_process');
   }
-  if (!response.candidates || response.candidates.length === 0) throw new Error('error_safety');
+
+  if (!response.candidates || response.candidates.length === 0) {
+    throw new Error('error_safety');
+  }
 
   const candidate = response.candidates[0];
   if (candidate.finishReason && candidate.finishReason !== 'STOP') {
@@ -57,10 +60,11 @@ function extractImageFromResponse(response: GeminiGenerateContentResponse): stri
       return `data:image/png;base64,${part.inlineData.data}`;
     }
   }
+
   throw new Error('error_no_image');
 }
 
-const KNOWN_ERRORS = new Set([
+const KNOWN_ERROR_KEYS = new Set([
   'error_safety', 'error_quota', 'error_timeout', 'error_upstream',
   'error_no_image', 'error_auth', 'error_payload', 'error_process'
 ]);
@@ -68,12 +72,12 @@ const KNOWN_ERRORS = new Set([
 function handleGeminiError(error: unknown): never {
   logger.error('Gemini API Error:', error);
   const msg = error instanceof Error ? error.message : 'error_process';
-  throw new Error(KNOWN_ERRORS.has(msg) ? msg : 'error_process');
+  throw new Error(KNOWN_ERROR_KEYS.has(msg) ? msg : 'error_process');
 }
 
 /**
- * GP55-001: New contract — sends {imageBase64, styleId, variationId} only.
- * Backend is authoritative for model selection and prompt assembly.
+ * GP55-001: New proxy contract.
+ * Sends only {imageBase64, styleId, variationId} — backend builds prompt and contents.
  */
 export const generateSticker = async (
   imageBase64: string,
@@ -81,6 +85,7 @@ export const generateSticker = async (
   variationId: VariationId = 'default'
 ): Promise<string> => {
   checkRateLimit();
+
   try {
     logger.info('Generating sticker with style:', styleId, 'variation:', variationId);
 
@@ -90,14 +95,21 @@ export const generateSticker = async (
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64, styleId, variationId })
       });
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})) as { error?: string };
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'error_process');
       }
+
       return response.json();
     };
 
-    const response: GeminiGenerateContentResponse = await withTimeout(apiCall(), API_TIMEOUT_MS, 'error_timeout');
+    const response: GeminiGenerateContentResponse = await withTimeout(
+      apiCall(),
+      API_TIMEOUT_MS,
+      'error_timeout'
+    );
+
     return extractImageFromResponse(response);
   } catch (error: unknown) {
     handleGeminiError(error);
@@ -115,12 +127,14 @@ const throttledMap = async <T, R>(
   for (const item of items) {
     const p = Promise.resolve().then(() => fn(item));
     results.push(p);
+
     if (concurrencyLimit <= items.length) {
       const e: Promise<void> = p.then(() => { executing.delete(e); }).catch(() => { executing.delete(e); });
       executing.add(e);
       if (executing.size >= concurrencyLimit) await Promise.race(executing);
     }
   }
+
   return Promise.all(results);
 };
 

@@ -84,7 +84,8 @@ const MAX_BODY_BYTES = 15 * 1024 * 1024;
 // ---------------------------------------------------------------------------
 const DEFAULT_MODEL = 'gemini-2.5-flash-image';
 
-// CO4-009 / GP55-009: canonical variation fragments
+// CO4-009 / GP55-009: Canonical variation fragments.
+// Client sends a VariationId string; server maps it here.
 const VARIATION_FRAGMENTS = {
   thumbs_up: 'Expression/Action: giving a thumbs up, cheerful.',
   laughing:  'Expression/Action: laughing heartily, mouth open, joyful.',
@@ -95,7 +96,8 @@ const VARIATION_FRAGMENTS = {
 
 const VALID_VARIATION_IDS = new Set(Object.keys(VARIATION_FRAGMENTS));
 
-// GP55-009: server-owned style prompt table
+// GP55-009: Style base prompts — server-owned authoritative table.
+// Keys must match StyleOption.id values in constants.ts.
 const STYLE_PROMPTS = {
   'chibi-anime':    { base: 'Chibi anime style, big expressive eyes, simplified cute proportions, vibrant colors', person: 'adorable chibi character' },
   'pixar-3d':       { base: 'Pixar/Disney 3D animation style, smooth surfaces, expressive face, warm lighting', person: 'charming 3D animated character' },
@@ -113,13 +115,18 @@ const STYLE_PROMPTS = {
 
 const VALID_STYLE_IDS = new Set(Object.keys(STYLE_PROMPTS));
 
-// GP55-001 / GP55-009: build Gemini prompt server-side only
+/**
+ * GP55-001 / GP55-009: Build the Gemini prompt server-side.
+ * Client only provides styleId + variationId — no raw prompt injection possible.
+ */
 function buildPrompt(styleId, variationId) {
   const style = STYLE_PROMPTS[styleId];
   const variationFragment = VARIATION_FRAGMENTS[variationId] || VARIATION_FRAGMENTS.default;
+  const styleDescription = `${style.base}, depicting a ${style.person}`;
+
   return `Generate a high-quality die-cut sticker of the person in the provided image.
 
-ART STYLE: ${style.base}, depicting a ${style.person}.
+ART STYLE: ${styleDescription}.
 
 CRITICAL INSTRUCTIONS:
 1. TRANSFORM the subject into a stylistic illustration matching the Art Style.
@@ -163,7 +170,8 @@ function getImageDimensions(buf, mimeType) {
         i += 2 + len;
       }
     }
-    return { width: 0, height: 0 }; // WebP: skip, safe default
+    // WebP dimension parsing omitted — returns safe default (no block)
+    return { width: 0, height: 0 };
   } catch {
     return { width: 0, height: 0 };
   }
@@ -176,20 +184,24 @@ function validateImage(base64Data) {
   } catch {
     throw { status: 400, code: 'error_payload', detail: 'Invalid base64 image data.' };
   }
-  if (buf.length > MAX_IMAGE_BYTES_DECODED) {
-    throw { status: 413, code: 'error_payload', detail: `Image too large. Max ${MAX_IMAGE_BYTES_DECODED / 1024 / 1024} MB decoded.` };
-  }
+
   if (buf.length < 12) {
     throw { status: 400, code: 'error_payload', detail: 'Image data too short to be valid.' };
   }
+  if (buf.length > MAX_IMAGE_BYTES_DECODED) {
+    throw { status: 413, code: 'error_payload', detail: `Image too large. Max ${MAX_IMAGE_BYTES_DECODED / 1024 / 1024} MB decoded.` };
+  }
+
   const mimeType = detectMimeFromBytes(buf);
   if (!mimeType) {
     throw { status: 400, code: 'error_payload', detail: 'Unsupported image format. Use PNG, JPEG, or WebP.' };
   }
+
   const { width, height } = getImageDimensions(buf, mimeType);
   if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
     throw { status: 400, code: 'error_payload', detail: `Image dimensions too large. Max ${MAX_IMAGE_DIMENSION}px per side.` };
   }
+
   return { mimeType };
 }
 
@@ -254,33 +266,32 @@ const server = http.createServer((req, res) => {
 
       try {
         const payload = JSON.parse(body);
+
+        // GP55-001: strict contract — only {imageBase64, styleId, variationId} accepted
         const { imageBase64, styleId, variationId } = payload;
 
-        // GP55-001: validate required fields
         if (!imageBase64 || typeof imageBase64 !== 'string') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'error_payload', detail: 'Missing imageBase64.' }));
           return;
         }
+
         if (!styleId || !VALID_STYLE_IDS.has(styleId)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'error_payload', detail: `Unknown styleId: ${styleId}` }));
           return;
         }
 
-        // CO4-009: clamp variationId to allowlist
+        // CO4-009: unknown variationId silently falls back to 'default'
         const safeVariationId = VALID_VARIATION_IDS.has(variationId) ? variationId : 'default';
 
-        // Strip data URL prefix
-        let cleanBase64 = imageBase64;
-        if (imageBase64.startsWith('data:')) {
-          const comma = imageBase64.indexOf(',');
-          if (comma !== -1) cleanBase64 = imageBase64.slice(comma + 1);
-        }
-
-        // GP55-006: validate image server-side
+        // GP55-006: server-side image validation
         let validatedMimeType;
+        let cleanBase64;
         try {
+          cleanBase64 = imageBase64.startsWith('data:')
+            ? imageBase64.slice(imageBase64.indexOf(',') + 1)
+            : imageBase64;
           const result = validateImage(cleanBase64);
           validatedMimeType = result.mimeType;
         } catch (validationError) {
