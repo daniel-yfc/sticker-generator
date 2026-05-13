@@ -45,18 +45,14 @@ if (!API_KEY) {
   console.warn('Warning: GEMINI_API_KEY not found in environment. Proxy will fail.');
 }
 
-// GP55-007: kill-switch — set GENERATION_ENABLED=false to block all generation
 const generationEnabled = () => process.env.GENERATION_ENABLED !== 'false';
 
-// GP55-007: in-memory daily quota counter (resets at midnight UTC)
-// Tune DAILY_QUOTA_LIMIT via env; default 200 calls/day
 const DAILY_QUOTA_LIMIT = parseInt(process.env.DAILY_QUOTA_LIMIT || '200', 10);
 let dailyCount = 0;
 let dailyWindowStart = todayUTCKey();
 
 function todayUTCKey() {
   const d = new Date();
-  // getUTCMonth() is 0-based — add 1 to avoid key collision across month boundaries
   return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
 }
 
@@ -71,8 +67,6 @@ function checkAndIncrementDailyQuota() {
   return true;
 }
 
-// CO4-003: CORS allow-list — read from FRONTEND_ORIGIN env
-// Multiple origins can be comma-separated: http://localhost:5173,https://myapp.com
 const ALLOWED_ORIGINS = (process.env.FRONTEND_ORIGIN || '')
   .split(',')
   .map(o => o.trim())
@@ -83,8 +77,133 @@ function isOriginAllowed(origin) {
   return ALLOWED_ORIGINS.includes(origin);
 }
 
-// GP55-003: maximum request body size (15 MB)
 const MAX_BODY_BYTES = 15 * 1024 * 1024;
+
+// ---------------------------------------------------------------------------
+// GP55-001 / GP55-009: Server-owned model allowlist and prompt table
+// ---------------------------------------------------------------------------
+const DEFAULT_MODEL = 'gemini-2.5-flash-image';
+
+// CO4-009 / GP55-009: Canonical variation fragments.
+// Client sends a VariationId string; server maps it here.
+const VARIATION_FRAGMENTS = {
+  thumbs_up: 'Expression/Action: giving a thumbs up, cheerful.',
+  laughing:  'Expression/Action: laughing heartily, mouth open, joyful.',
+  surprised: 'Expression/Action: eyes wide open, surprised expression.',
+  cool:      'Expression/Action: cool and confident, slight smirk.',
+  default:   'Expression: Expressive and charismatic.',
+};
+
+const VALID_VARIATION_IDS = new Set(Object.keys(VARIATION_FRAGMENTS));
+
+// GP55-009: Style base prompts — server-owned authoritative table.
+// Keys must match StyleOption.id values in constants.ts.
+const STYLE_PROMPTS = {
+  'chibi-anime':    { base: 'Chibi anime style, big expressive eyes, simplified cute proportions, vibrant colors', person: 'adorable chibi character' },
+  'pixar-3d':       { base: 'Pixar/Disney 3D animation style, smooth surfaces, expressive face, warm lighting', person: 'charming 3D animated character' },
+  'flat-vector':    { base: 'Flat vector illustration, bold outlines, minimal shading, clean geometric shapes', person: 'stylized flat vector person' },
+  'watercolor':     { base: 'Watercolor painting style, soft edges, translucent washes, artistic brushwork', person: 'watercolor portrait character' },
+  'comic-book':     { base: 'Comic book style, bold ink outlines, halftone shading, dynamic composition', person: 'comic book hero character' },
+  'sticker-pop':    { base: 'Bold pop-art sticker style, high contrast colors, thick outlines, playful energy', person: 'pop-art sticker character' },
+  'sketch':         { base: 'Hand-drawn pencil sketch style, expressive lines, cross-hatching, artistic texture', person: 'sketched portrait character' },
+  'neon-cyberpunk': { base: 'Neon cyberpunk style, glowing edges, dark background elements, futuristic details', person: 'cyberpunk character with neon accents' },
+  'minimalist':     { base: 'Minimalist style, simple clean lines, limited color palette, essential details only', person: 'minimalist stylized person' },
+  'retro-cartoon':  { base: 'Retro cartoon style, vintage animation aesthetic, bold lines, classic cartoon proportions', person: 'retro cartoon character' },
+  'oil-painting':   { base: 'Oil painting style, rich textured brushstrokes, classical portrait composition, depth', person: 'oil painted portrait character' },
+  'emoji-style':    { base: 'Emoji/emoticon style, simple expressive face, bold outlines, bright flat colors', person: 'emoji-style face character' },
+};
+
+const VALID_STYLE_IDS = new Set(Object.keys(STYLE_PROMPTS));
+
+/**
+ * GP55-001 / GP55-009: Build the Gemini prompt server-side.
+ * Client only provides styleId + variationId — no raw prompt injection possible.
+ */
+function buildPrompt(styleId, variationId) {
+  const style = STYLE_PROMPTS[styleId];
+  const variationFragment = VARIATION_FRAGMENTS[variationId] || VARIATION_FRAGMENTS.default;
+  const styleDescription = `${style.base}, depicting a ${style.person}`;
+
+  return `Generate a high-quality die-cut sticker of the person in the provided image.
+
+ART STYLE: ${styleDescription}.
+
+CRITICAL INSTRUCTIONS:
+1. TRANSFORM the subject into a stylistic illustration matching the Art Style.
+2. DO NOT produce a realistic photo. The result must look like a drawing, painting, or 3D render.
+3. SIMPLIFY details to match the sticker aesthetic.
+4. Add a thick, clean WHITE BORDER surrounding the subject (die-cut style).
+5. Use a solid white background.
+
+${variationFragment}`;
+}
+
+// ---------------------------------------------------------------------------
+// GP55-006: Server-side image validation (magic bytes, size, dimensions)
+// ---------------------------------------------------------------------------
+const MAX_IMAGE_BYTES_DECODED = 10 * 1024 * 1024; // 10 MB
+const MAX_IMAGE_DIMENSION = 4096;
+
+function detectMimeFromBytes(buf) {
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return 'image/png';
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return 'image/jpeg';
+  if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+      buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return 'image/webp';
+  return null;
+}
+
+function getImageDimensions(buf, mimeType) {
+  try {
+    if (mimeType === 'image/png') {
+      return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+    }
+    if (mimeType === 'image/jpeg') {
+      let i = 2;
+      while (i < buf.length - 8) {
+        if (buf[i] !== 0xFF) break;
+        const marker = buf[i + 1];
+        const len = buf.readUInt16BE(i + 2);
+        if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7) ||
+            (marker >= 0xC9 && marker <= 0xCB) || (marker >= 0xCD && marker <= 0xCF)) {
+          return { width: buf.readUInt16BE(i + 7), height: buf.readUInt16BE(i + 5) };
+        }
+        i += 2 + len;
+      }
+    }
+    // WebP dimension parsing omitted — returns safe default (no block)
+    return { width: 0, height: 0 };
+  } catch {
+    return { width: 0, height: 0 };
+  }
+}
+
+function validateImage(base64Data) {
+  let buf;
+  try {
+    buf = Buffer.from(base64Data, 'base64');
+  } catch {
+    throw { status: 400, code: 'error_payload', detail: 'Invalid base64 image data.' };
+  }
+
+  if (buf.length < 12) {
+    throw { status: 400, code: 'error_payload', detail: 'Image data too short to be valid.' };
+  }
+  if (buf.length > MAX_IMAGE_BYTES_DECODED) {
+    throw { status: 413, code: 'error_payload', detail: `Image too large. Max ${MAX_IMAGE_BYTES_DECODED / 1024 / 1024} MB decoded.` };
+  }
+
+  const mimeType = detectMimeFromBytes(buf);
+  if (!mimeType) {
+    throw { status: 400, code: 'error_payload', detail: 'Unsupported image format. Use PNG, JPEG, or WebP.' };
+  }
+
+  const { width, height } = getImageDimensions(buf, mimeType);
+  if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+    throw { status: 400, code: 'error_payload', detail: `Image dimensions too large. Max ${MAX_IMAGE_DIMENSION}px per side.` };
+  }
+
+  return { mimeType };
+}
 
 // ---------------------------------------------------------------------------
 // Server
@@ -92,19 +211,15 @@ const MAX_BODY_BYTES = 15 * 1024 * 1024;
 const server = http.createServer((req, res) => {
   const origin = req.headers['origin'];
 
-  // CO4-003: only echo allowed origins; reject everything else
   if (isOriginAllowed(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
   } else if (origin) {
-    // Origin present but not allowed — reject preflight immediately
     if (req.method === 'OPTIONS') {
       res.writeHead(403);
       res.end('Forbidden');
       return;
     }
-    // For non-preflight cross-origin requests: continue but no CORS header
-    // (browser will block the response)
   }
 
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -117,21 +232,18 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'POST' && req.url === '/api/generate') {
-    // GP55-007: kill-switch check (re-read env at request time)
     if (!generationEnabled()) {
       res.writeHead(503, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'error_process', detail: 'Generation is currently disabled.' }));
       return;
     }
 
-    // GP55-007: daily quota check
     if (!checkAndIncrementDailyQuota()) {
       res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '3600' });
       res.end(JSON.stringify({ error: 'error_quota', detail: 'Daily generation limit reached.' }));
       return;
     }
 
-    // GP55-003: enforce body size limit
     let body = '';
     let bodyBytes = 0;
     let bodyTooLarge = false;
@@ -155,21 +267,56 @@ const server = http.createServer((req, res) => {
       try {
         const payload = JSON.parse(body);
 
-        // Wave 2 will lock down model/contents/generationConfig fully.
-        // For now: enforce model allow-list as a first gate.
-        const MODEL_ALLOWLIST = new Set(['gemini-2.5-flash-image']);
-        const model = MODEL_ALLOWLIST.has(payload.model) ? payload.model : 'gemini-2.5-flash-image';
+        // GP55-001: strict contract — only {imageBase64, styleId, variationId} accepted
+        const { imageBase64, styleId, variationId } = payload;
+
+        if (!imageBase64 || typeof imageBase64 !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'error_payload', detail: 'Missing imageBase64.' }));
+          return;
+        }
+
+        if (!styleId || !VALID_STYLE_IDS.has(styleId)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'error_payload', detail: `Unknown styleId: ${styleId}` }));
+          return;
+        }
+
+        // CO4-009: unknown variationId silently falls back to 'default'
+        const safeVariationId = VALID_VARIATION_IDS.has(variationId) ? variationId : 'default';
+
+        // GP55-006: server-side image validation
+        let validatedMimeType;
+        let cleanBase64;
+        try {
+          cleanBase64 = imageBase64.startsWith('data:')
+            ? imageBase64.slice(imageBase64.indexOf(',') + 1)
+            : imageBase64;
+          const result = validateImage(cleanBase64);
+          validatedMimeType = result.mimeType;
+        } catch (validationError) {
+          res.writeHead(validationError.status || 400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: validationError.code || 'error_payload', detail: validationError.detail }));
+          return;
+        }
+
+        // GP55-001 / GP55-009: build prompt server-side
+        const prompt = buildPrompt(styleId, safeVariationId);
 
         const googlePayload = JSON.stringify({
-          contents: payload.contents,
-          generationConfig: payload.generationConfig
+          contents: {
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType: validatedMimeType, data: cleanBase64 } }
+            ]
+          },
+          generationConfig: { imageConfig: { aspectRatio: '1:1' } }
         });
 
-        // GP55-004: API key in header, not URL query string
         const options = {
           hostname: 'generativelanguage.googleapis.com',
           port: 443,
-          path: `/v1beta/models/${model}:generateContent`,
+          path: `/v1beta/models/${DEFAULT_MODEL}:generateContent`,
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -185,16 +332,21 @@ const server = http.createServer((req, res) => {
 
         googleReq.on('error', (e) => {
           console.error('Google API Request Error:', e);
-          res.writeHead(500);
-          res.end(JSON.stringify({ error: 'error_process' }));
+          if (!res.headersSent) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: 'error_process' }));
+          }
         });
 
         googleReq.write(googlePayload);
         googleReq.end();
+
       } catch (e) {
         console.error('Error parsing request body:', e);
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: 'error_payload', detail: 'Invalid JSON.' }));
+        if (!res.headersSent) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'error_payload', detail: 'Invalid JSON.' }));
+        }
       }
     });
   } else {
@@ -209,4 +361,5 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`Generation enabled: ${generationEnabled()}`);
   console.log(`Daily quota limit: ${DAILY_QUOTA_LIMIT}`);
   console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || '(none — set FRONTEND_ORIGIN env)'}`);
+  console.log(`Valid styles: ${[...VALID_STYLE_IDS].join(', ')}`);
 });
