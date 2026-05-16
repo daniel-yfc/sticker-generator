@@ -196,7 +196,7 @@ function validateImage(base64Data) {
 // GP55-002: Per-IP rate limiting (in-memory, single-instance)
 // WARNING: resets on server restart; not suitable for multi-instance deployments.
 // ---------------------------------------------------------------------------
-const rateLimitMap = new Map(); // Map<ip, { count: number, windowStart: number }>
+const rateLimitMap = new Map();
 
 function getRateLimitConfig() {
   return {
@@ -232,13 +232,11 @@ function checkRateLimit(ip) {
 // ---------------------------------------------------------------------------
 const usedCaptchaTokens = new Set();
 // WARNING: usedCaptchaTokens resets on server restart; Turnstile token TTL is
-// ~5 min so the replay window exposure is bounded. Replace with Redis in Wave 4
-// if multi-instance or persistence is required.
+// ~5 min so the replay window exposure is bounded. Replace with Redis in Wave 4.
 
 async function verifyCaptcha(token) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
-    // No secret configured — skip verification in dev (log warning)
     console.warn('TURNSTILE_SECRET_KEY not set; skipping CAPTCHA verification.');
     return true;
   }
@@ -266,7 +264,6 @@ async function verifyCaptcha(token) {
         try {
           const json = JSON.parse(data);
           if (json.success) {
-            // Mark token as used to prevent replay (CO4-002)
             usedCaptchaTokens.add(token);
             resolve(true);
           } else {
@@ -284,7 +281,7 @@ async function verifyCaptcha(token) {
 }
 
 // ---------------------------------------------------------------------------
-// Server factory — exported for test harness
+// Server factory - exported for test harness
 // ---------------------------------------------------------------------------
 function createApp() {
   return http.createServer(async (req, res) => {
@@ -329,18 +326,7 @@ function createApp() {
         return;
       }
 
-      if (!generationEnabled()) {
-        res.writeHead(503, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'error_process', detail: 'Generation is currently disabled.' }));
-        return;
-      }
-
-      if (!checkAndIncrementDailyQuota()) {
-        res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '3600' });
-        res.end(JSON.stringify({ error: 'error_quota', detail: 'Daily generation limit reached.' }));
-        return;
-      }
-
+      // Read body first so CAPTCHA check has access to captchaToken
       let body = '';
       let bodyBytes = 0;
       let bodyTooLarge = false;
@@ -377,6 +363,19 @@ function createApp() {
           if (!captchaValid) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'error_captcha', detail: 'CAPTCHA verification failed.' }));
+            return;
+          }
+
+          // generationEnabled check comes after CAPTCHA so security gates run first
+          if (!generationEnabled()) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'error_process', detail: 'Generation is currently disabled.' }));
+            return;
+          }
+
+          if (!checkAndIncrementDailyQuota()) {
+            res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '3600' });
+            res.end(JSON.stringify({ error: 'error_quota', detail: 'Daily generation limit reached.' }));
             return;
           }
 
@@ -463,7 +462,6 @@ function createApp() {
   });
 }
 
-// Allow test harness to import without triggering listen
 if (require.main === module) {
   const PORT = process.env.BACKEND_PORT || 3001;
   const server = createApp();
@@ -471,7 +469,7 @@ if (require.main === module) {
     console.log(`Backend proxy server running on http://0.0.0.0:${PORT}`);
     console.log(`Generation enabled: ${generationEnabled()}`);
     console.log(`Daily quota limit: ${DAILY_QUOTA_LIMIT}`);
-    console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || '(none — set FRONTEND_ORIGIN env)'}`);
+    console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || '(none - set FRONTEND_ORIGIN env)'}`);
     console.log(`Valid styles: ${[...VALID_STYLE_IDS].join(', ')}`);
   });
 }
