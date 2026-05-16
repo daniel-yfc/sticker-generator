@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generateSticker, generateStickerSet } from './geminiService';
 import { STYLES } from '../constants';
+import { VariationId } from '../utils/promptBuilder';
 import { stickerGenerationLimiter } from '../utils/rateLimit';
 
 const originalFetch = global.fetch;
@@ -49,9 +50,8 @@ describe('geminiService', () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       const fakeImageBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
-      const fakeStyle = STYLES[0];
 
-      await expect(generateSticker(fakeImageBase64, fakeStyle))
+      await expect(generateSticker(fakeImageBase64, STYLES[0].style))
         .rejects
         .toThrow('error_safety');
     });
@@ -79,7 +79,7 @@ describe('geminiService', () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
-      const result = await generateSticker(validBase64, STYLES[0]);
+      const result = await generateSticker(validBase64, STYLES[0].style);
 
       expect(global.fetch).toHaveBeenCalledWith('/api/generate', expect.objectContaining({
         method: 'POST',
@@ -98,14 +98,14 @@ describe('geminiService', () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
-      await expect(generateSticker(validBase64, STYLES[0])).rejects.toThrow('Some server error');
+      await expect(generateSticker(validBase64, STYLES[0].style)).rejects.toThrow('Some server error');
     });
 
     it('generateSticker handles network errors', async () => {
       (global.fetch as any).mockRejectedValue(new Error('Network error'));
 
       const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
-      await expect(generateSticker(validBase64, STYLES[0])).rejects.toThrow('Network error');
+      await expect(generateSticker(validBase64, STYLES[0].style)).rejects.toThrow('Network error');
     });
   });
 
@@ -132,9 +132,9 @@ describe('geminiService', () => {
       };
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      const variations = ['var1', 'var2'];
+      const variations: VariationId[] = ['thumbs_up', 'laughing'];
       const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
-      const results = await generateStickerSet(validBase64, STYLES[0], variations);
+      const results = await generateStickerSet(validBase64, STYLES[0].style, variations);
 
       expect(results).toHaveLength(2);
       expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -152,10 +152,10 @@ describe('geminiService', () => {
         })
         .mockRejectedValueOnce(new Error('API Error'));
 
-      const variations = ['var1', 'var2'];
+      const variations: VariationId[] = ['thumbs_up', 'laughing'];
       const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
 
-      await expect(generateStickerSet(validBase64, STYLES[0], variations)).rejects.toThrow('API Error');
+      await expect(generateStickerSet(validBase64, STYLES[0].style, variations)).rejects.toThrow('API Error');
     });
   });
 

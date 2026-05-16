@@ -115,7 +115,6 @@ function buildPrompt(styleId, variationId) {
   const style = STYLE_PROMPTS[styleId];
   const variationFragment = VARIATION_FRAGMENTS[variationId] || VARIATION_FRAGMENTS.default;
   const styleDescription = `${style.base}, depicting a ${style.person}`;
-
   return `Generate a high-quality die-cut sticker of the person in the provided image.
 
 ART STYLE: ${styleDescription}.
@@ -176,32 +175,116 @@ function validateImage(base64Data) {
   } catch {
     throw { status: 400, code: 'error_payload', detail: 'Invalid base64 image data.' };
   }
-
   if (buf.length < 12) {
     throw { status: 400, code: 'error_payload', detail: 'Image data too short to be valid.' };
   }
   if (buf.length > MAX_IMAGE_BYTES_DECODED) {
     throw { status: 413, code: 'error_payload', detail: `Image too large. Max ${MAX_IMAGE_BYTES_DECODED / 1024 / 1024} MB decoded.` };
   }
-
   const mimeType = detectMimeFromBytes(buf);
   if (!mimeType) {
     throw { status: 400, code: 'error_payload', detail: 'Unsupported image format. Use PNG, JPEG, or WebP.' };
   }
-
   const { width, height } = getImageDimensions(buf, mimeType);
   if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
     throw { status: 400, code: 'error_payload', detail: `Image dimensions too large. Max ${MAX_IMAGE_DIMENSION}px per side.` };
   }
-
   return { mimeType };
 }
 
 // ---------------------------------------------------------------------------
-// Server factory — exported for test harness
+// GP55-002: Per-IP rate limiting (in-memory, single-instance)
+// WARNING: resets on server restart; not suitable for multi-instance deployments.
+// ---------------------------------------------------------------------------
+const rateLimitMap = new Map();
+
+function getRateLimitConfig() {
+  return {
+    limit: parseInt(process.env.RATE_LIMIT_PER_IP || '5', 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
+  };
+}
+
+function getClientIp(req) {
+  // GP55-015: only trust x-forwarded-for when TRUST_PROXY=true (default: false)
+  if (process.env.TRUST_PROXY === 'true') {
+    const xff = req.headers['x-forwarded-for'];
+    if (xff) return xff.split(',')[0].trim();
+  }
+  return req.socket.remoteAddress || '127.0.0.1';
+}
+
+function checkRateLimit(ip) {
+  const { limit, windowMs } = getRateLimitConfig();
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now - entry.windowStart >= windowMs) {
+    rateLimitMap.set(ip, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// CO4-008 + CO4-002: Turnstile CAPTCHA server-side verification + replay guard
+// ---------------------------------------------------------------------------
+const usedCaptchaTokens = new Set();
+// WARNING: usedCaptchaTokens resets on server restart; Turnstile token TTL is
+// ~5 min so the replay window exposure is bounded. Replace with Redis in Wave 4.
+
+async function verifyCaptcha(token) {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) {
+    console.warn('TURNSTILE_SECRET_KEY not set; skipping CAPTCHA verification.');
+    return true;
+  }
+
+  // CO4-002: reject replayed tokens before hitting Turnstile API
+  if (usedCaptchaTokens.has(token)) return false;
+
+  const body = new URLSearchParams({ secret, response: token });
+  return new Promise((resolve) => {
+    const postData = body.toString();
+    const options = {
+      hostname: 'challenges.cloudflare.com',
+      port: 443,
+      path: '/turnstile/v0/siteverify',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(postData),
+      },
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (json.success) {
+            usedCaptchaTokens.add(token);
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        } catch {
+          resolve(false);
+        }
+      });
+    });
+    req.on('error', () => resolve(false));
+    req.write(postData);
+    req.end();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Server factory - exported for test harness
 // ---------------------------------------------------------------------------
 function createApp() {
-  return http.createServer((req, res) => {
+  return http.createServer(async (req, res) => {
     const origin = req.headers['origin'];
 
     if (isOriginAllowed(origin)) {
@@ -225,18 +308,25 @@ function createApp() {
     }
 
     if (req.method === 'POST' && req.url === '/api/generate') {
-      if (!generationEnabled()) {
-        res.writeHead(503, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'error_process', detail: 'Generation is currently disabled.' }));
+
+      // GP55-015: enforce Content-Type application/json
+      const contentType = req.headers['content-type'] || '';
+      if (!contentType.includes('application/json')) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'error_payload', detail: 'Content-Type must be application/json.' }));
         return;
       }
 
-      if (!checkAndIncrementDailyQuota()) {
-        res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '3600' });
-        res.end(JSON.stringify({ error: 'error_quota', detail: 'Daily generation limit reached.' }));
+      // GP55-002: per-IP rate limit
+      const clientIp = getClientIp(req);
+      if (!checkRateLimit(clientIp)) {
+        const { windowMs } = getRateLimitConfig();
+        res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(Math.ceil(windowMs / 1000)) });
+        res.end(JSON.stringify({ error: 'error_rate_limit', detail: 'Too many requests. Please try again later.' }));
         return;
       }
 
+      // Read body first so CAPTCHA check has access to captchaToken
       let body = '';
       let bodyBytes = 0;
       let bodyTooLarge = false;
@@ -254,12 +344,40 @@ function createApp() {
         body += chunk.toString();
       });
 
-      req.on('end', () => {
+      req.on('end', async () => {
         if (bodyTooLarge) return;
 
         try {
           const payload = JSON.parse(body);
-          const { imageBase64, styleId, variationId } = payload;
+          const { imageBase64, styleId, variationId, captchaToken } = payload;
+
+          // CO4-008: CAPTCHA presence check
+          if (!captchaToken || typeof captchaToken !== 'string' || captchaToken.trim() === '') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'error_captcha', detail: 'Missing or empty captchaToken.' }));
+            return;
+          }
+
+          // CO4-008 + CO4-002: verify token with Turnstile (includes replay check)
+          const captchaValid = await verifyCaptcha(captchaToken.trim());
+          if (!captchaValid) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'error_captcha', detail: 'CAPTCHA verification failed.' }));
+            return;
+          }
+
+          // generationEnabled check comes after CAPTCHA so security gates run first
+          if (!generationEnabled()) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'error_process', detail: 'Generation is currently disabled.' }));
+            return;
+          }
+
+          if (!checkAndIncrementDailyQuota()) {
+            res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '3600' });
+            res.end(JSON.stringify({ error: 'error_quota', detail: 'Daily generation limit reached.' }));
+            return;
+          }
 
           if (!imageBase64 || typeof imageBase64 !== 'string') {
             res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -344,7 +462,6 @@ function createApp() {
   });
 }
 
-// Allow test harness to import without triggering listen
 if (require.main === module) {
   const PORT = process.env.BACKEND_PORT || 3001;
   const server = createApp();
@@ -352,7 +469,7 @@ if (require.main === module) {
     console.log(`Backend proxy server running on http://0.0.0.0:${PORT}`);
     console.log(`Generation enabled: ${generationEnabled()}`);
     console.log(`Daily quota limit: ${DAILY_QUOTA_LIMIT}`);
-    console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || '(none — set FRONTEND_ORIGIN env)'}`);
+    console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || '(none - set FRONTEND_ORIGIN env)'}`);
     console.log(`Valid styles: ${[...VALID_STYLE_IDS].join(', ')}`);
   });
 }

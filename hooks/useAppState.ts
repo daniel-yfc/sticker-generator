@@ -4,6 +4,7 @@ import { STYLES, STYLES_MAP, TRANSLATIONS } from '../constants';
 import { logger } from '../utils/logger';
 import { validateHistory } from '../utils/validation';
 import { generateSticker, generateStickerSet } from '../services/geminiService';
+import { VariationId } from '../utils/promptBuilder';
 
 const HISTORY_KEY = 'sticker_maker_history_v2';
 
@@ -152,7 +153,7 @@ export const useAppState = () => {
     }, 70000);
 
     try {
-      const resultImage = await generateSticker(processedImage, selectedStyle);
+      const resultImage = await generateSticker(processedImage, selectedStyle.style);
 
       const img = new Image();
       img.onload = () => {
@@ -186,15 +187,10 @@ export const useAppState = () => {
     setErrorMessage(null);
     setGeneratedSet([]);
 
-    const variations = [
-      "giving a friendly thumbs up with a big smile",
-      "looking very happy and laughing joyfully",
-      "looking surprised with wide eyes and open mouth",
-      "looking cool wearing stylish sunglasses"
-    ];
+    const variations: VariationId[] = ['thumbs_up', 'laughing', 'surprised', 'cool'];
 
     try {
-      const results = await generateStickerSet(processedImage, selectedStyle, variations);
+      const results = await generateStickerSet(processedImage, selectedStyle.style, variations);
       addToHistory(results.map(imgUrl => ({ imageUrl: imgUrl, styleId: selectedStyle.id })));
       setGeneratedSet(results);
       setStatus(AppStatus.SET_SUCCESS);
