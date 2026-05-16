@@ -15,12 +15,13 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/tests/server.*.test.cjs',
+      '**/tests/server.*.test.mjs',
     ],
     projects: [
       {
         test: {
           name: 'server',
-          include: ['tests/server.*.test.cjs'],
+          include: ['tests/server.*.test.mjs'],
           environment: 'node',
           globals: true,
         },
