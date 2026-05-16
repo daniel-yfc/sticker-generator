@@ -17,6 +17,11 @@ export interface RateLimitResult {
   resetTime: number;
 }
 
+// CO4-002: in-memory fallback for when localStorage is unavailable
+// (QuotaExceededError, Safari ITP private mode, disabled storage).
+// Keyed by the same string used for localStorage so semantics are identical.
+const fallbackMap = new Map<string, { count: number; windowStart: number }>();
+
 /**
  * Rate limiter class using token bucket algorithm
  * Prevents excessive API calls and protects against abuse
@@ -42,7 +47,7 @@ export class RateLimiter {
   /**
    * Checks if request is allowed under rate limit
    * Updates token count and timestamps
-   * 
+   *
    * @param identifier - Unique identifier for the rate limit (e.g., 'generate_sticker')
    * @returns Rate limit result
    */
@@ -67,37 +72,22 @@ export class RateLimiter {
 
       if (data.count >= this.config.maxRequests) {
         logger.warn(`Rate limit exceeded for ${identifier}`);
-        return {
-          allowed: false,
-          remaining: 0,
-          resetTime,
-        };
+        return { allowed: false, remaining: 0, resetTime };
       }
 
-      // Increment count and save
       data.count++;
       localStorage.setItem(key, JSON.stringify(data));
 
-      return {
-        allowed: true,
-        remaining: remaining - 1,
-        resetTime,
-      };
-    } catch (e) {
-      logger.error('Rate limit check failed', e);
-      // Fail open - allow request if storage fails
-      return {
-        allowed: true,
-        remaining: this.config.maxRequests,
-        resetTime: now + this.config.windowMs,
-      };
+      return { allowed: true, remaining: remaining - 1, resetTime };
+    } catch {
+      return this._fallbackCheck(key, now);
     }
   }
 
   /**
    * Resets rate limit for a specific identifier
    * Useful for testing or manual resets
-   * 
+   *
    * @param identifier - Identifier to reset
    */
   reset(identifier: string): void {
@@ -105,14 +95,15 @@ export class RateLimiter {
     try {
       localStorage.removeItem(key);
       logger.info(`Rate limit reset for ${identifier}`);
-    } catch (e) {
-      logger.error('Failed to reset rate limit', e);
+    } catch {
+      fallbackMap.delete(key);
+      logger.warn(`Rate limit reset via in-memory fallback for ${identifier}`);
     }
   }
 
   /**
    * Gets current rate limit status without incrementing
-   * 
+   *
    * @param identifier - Identifier to check
    * @returns Current rate limit status
    */
@@ -131,7 +122,7 @@ export class RateLimiter {
       }
 
       const data = JSON.parse(stored);
-      
+
       if (now - data.windowStart >= this.config.windowMs) {
         return {
           allowed: true,
@@ -146,14 +137,45 @@ export class RateLimiter {
         remaining: Math.max(0, remaining),
         resetTime: data.windowStart + this.config.windowMs,
       };
-    } catch (e) {
-      logger.error('Failed to get rate limit status', e);
+    } catch {
+      const entry = fallbackMap.get(key);
+      if (!entry || now - entry.windowStart >= this.config.windowMs) {
+        return {
+          allowed: true,
+          remaining: this.config.maxRequests,
+          resetTime: now + this.config.windowMs,
+        };
+      }
+      const remaining = this.config.maxRequests - entry.count;
       return {
-        allowed: true,
-        remaining: this.config.maxRequests,
-        resetTime: now + this.config.windowMs,
+        allowed: remaining > 0,
+        remaining: Math.max(0, remaining),
+        resetTime: entry.windowStart + this.config.windowMs,
       };
     }
+  }
+
+  // CO4-002: in-memory rate check used when localStorage is unavailable.
+  // Logs a warn on first use to record the degradation event.
+  private _fallbackCheck(key: string, now: number): RateLimitResult {
+    logger.warn(`Rate limiter degraded to in-memory fallback for key: ${key}`);
+
+    let entry = fallbackMap.get(key);
+    if (!entry || now - entry.windowStart >= this.config.windowMs) {
+      entry = { count: 0, windowStart: now };
+      fallbackMap.set(key, entry);
+    }
+
+    const resetTime = entry.windowStart + this.config.windowMs;
+    const remaining = this.config.maxRequests - entry.count;
+
+    if (entry.count >= this.config.maxRequests) {
+      logger.warn(`Rate limit exceeded (in-memory fallback) for key: ${key}`);
+      return { allowed: false, remaining: 0, resetTime };
+    }
+
+    entry.count++;
+    return { allowed: true, remaining: remaining - 1, resetTime };
   }
 }
 
@@ -163,4 +185,3 @@ export const stickerGenerationLimiter = new RateLimiter({
   windowMs: 60000,    // per minute
   keyPrefix: 'sticker_gen',
 });
-
