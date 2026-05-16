@@ -194,7 +194,6 @@ function validateImage(base64Data) {
 
 // ---------------------------------------------------------------------------
 // GP55-002: Per-IP rate limiting (in-memory, single-instance)
-// WARNING: resets on server restart; not suitable for multi-instance deployments.
 // ---------------------------------------------------------------------------
 const rateLimitMap = new Map();
 
@@ -206,7 +205,6 @@ function getRateLimitConfig() {
 }
 
 function getClientIp(req) {
-  // GP55-015: only trust x-forwarded-for when TRUST_PROXY=true (default: false)
   if (process.env.TRUST_PROXY === 'true') {
     const xff = req.headers['x-forwarded-for'];
     if (xff) return xff.split(',')[0].trim();
@@ -228,11 +226,9 @@ function checkRateLimit(ip) {
 }
 
 // ---------------------------------------------------------------------------
-// CO4-008 + CO4-002: Turnstile CAPTCHA server-side verification + replay guard
+// CO4-008 + CO4-002: Turnstile CAPTCHA verification + replay guard
 // ---------------------------------------------------------------------------
 const usedCaptchaTokens = new Set();
-// WARNING: usedCaptchaTokens resets on server restart; Turnstile token TTL is
-// ~5 min so the replay window exposure is bounded. Replace with Redis in Wave 4.
 
 async function verifyCaptcha(token) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
@@ -240,8 +236,6 @@ async function verifyCaptcha(token) {
     console.warn('TURNSTILE_SECRET_KEY not set; skipping CAPTCHA verification.');
     return true;
   }
-
-  // CO4-002: reject replayed tokens before hitting Turnstile API
   if (usedCaptchaTokens.has(token)) return false;
 
   const body = new URLSearchParams({ secret, response: token });
@@ -263,15 +257,9 @@ async function verifyCaptcha(token) {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          if (json.success) {
-            usedCaptchaTokens.add(token);
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        } catch {
-          resolve(false);
-        }
+          if (json.success) { usedCaptchaTokens.add(token); resolve(true); }
+          else resolve(false);
+        } catch { resolve(false); }
       });
     });
     req.on('error', () => resolve(false));
@@ -281,7 +269,164 @@ async function verifyCaptcha(token) {
 }
 
 // ---------------------------------------------------------------------------
-// Server factory - exported for test harness
+// GP55-008A: explicit safetySettings sent with every Gemini request
+// ---------------------------------------------------------------------------
+const SAFETY_SETTINGS = [
+  { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+  { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+];
+
+// ---------------------------------------------------------------------------
+// GP55-013A: map upstream status codes to structured errors
+// ---------------------------------------------------------------------------
+function mapUpstreamStatus(statusCode) {
+  if (statusCode === 401 || statusCode === 403) return { clientStatus: 401, code: 'error_auth',     retryable: false };
+  if (statusCode === 429)                        return { clientStatus: 429, code: 'error_quota',    retryable: false };
+  if (statusCode === 408 || statusCode === 504)  return { clientStatus: 504, code: 'error_timeout',  retryable: true };
+  if (statusCode >= 500)                         return { clientStatus: 502, code: 'error_upstream', retryable: true };
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Gemini upstream config — injectable for testing via env vars
+// Production: GEMINI_API_PROTOCOL=https  GEMINI_API_HOST=generativelanguage.googleapis.com  GEMINI_API_PORT=443
+// Test:       GEMINI_API_PROTOCOL=http   GEMINI_API_HOST=127.0.0.1                          GEMINI_API_PORT=<fake>
+// ---------------------------------------------------------------------------
+function getGeminiTransport() {
+  const protocol = process.env.GEMINI_API_PROTOCOL || 'https';
+  return protocol === 'http' ? http : https;
+}
+
+function getGeminiOptions(payloadLength) {
+  const host     = process.env.GEMINI_API_HOST     || 'generativelanguage.googleapis.com';
+  const port     = parseInt(process.env.GEMINI_API_PORT || '443', 10);
+  const protocol = process.env.GEMINI_API_PROTOCOL || 'https';
+  return {
+    hostname: host,
+    port,
+    path: `/v1beta/models/${DEFAULT_MODEL}:generateContent`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': payloadLength,
+      // omit API key when hitting local test server
+      ...(protocol === 'https' ? { 'x-goog-api-key': API_KEY } : {}),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// CO4-011 + GP55-014 + DS4-23 + GP55-008A: Gemini call with retry
+// Timeout debt: 20s × 3 + ~600ms backoff ≈ 61s total.
+// Wave 5 must raise client withTimeout->75s, UI timeout->85s.
+// ---------------------------------------------------------------------------
+const GEMINI_TIMEOUT_MS = 20_000;
+const MAX_RETRIES = 2;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function attemptGeminiCall(googlePayload, clientReq) {
+  return new Promise((resolve, reject) => {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), GEMINI_TIMEOUT_MS);
+
+    const onClientClose = () => ac.abort();
+    clientReq.on('close', onClientClose);
+
+    const transport = getGeminiTransport();
+    const options = { ...getGeminiOptions(Buffer.byteLength(googlePayload)), signal: ac.signal };
+
+    const googleReq = transport.request(options, (googleRes) => {
+      clearTimeout(timer);
+      clientReq.removeListener('close', onClientClose);
+
+      // DS4-23: validate Content-Type before reading body
+      const ct = googleRes.headers['content-type'] || '';
+      if (!ct.includes('application/json')) {
+        googleRes.resume();
+        return resolve({
+          ok: false, retryable: false, clientStatus: 502,
+          body: JSON.stringify({ error: 'error_upstream', detail: 'non-JSON response from upstream' }),
+        });
+      }
+
+      let data = '';
+      googleRes.on('data', c => { data += c; });
+      googleRes.on('end', () => {
+        // GP55-013A: map non-200 upstream status
+        const mapped = mapUpstreamStatus(googleRes.statusCode);
+        if (mapped) {
+          return resolve({
+            ok: false, retryable: mapped.retryable,
+            clientStatus: mapped.clientStatus,
+            body: JSON.stringify({ error: mapped.code }),
+          });
+        }
+
+        // 200: GP55-008A — check promptFeedback.blockReason
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.promptFeedback && parsed.promptFeedback.blockReason) {
+            return resolve({
+              ok: false, retryable: false, clientStatus: 200,
+              body: JSON.stringify({ error: 'error_safety', detail: parsed.promptFeedback.blockReason }),
+            });
+          }
+        } catch { /* non-parseable 200 — pass through */ }
+
+        resolve({ ok: true, clientStatus: 200, body: data });
+      });
+    });
+
+    googleReq.on('error', (e) => {
+      clearTimeout(timer);
+      clientReq.removeListener('close', onClientClose);
+      if (ac.signal.aborted) return reject({ timeout: true });
+      reject(e);
+    });
+
+    googleReq.write(googlePayload);
+    googleReq.end();
+  });
+}
+
+async function callGeminiWithRetry(googlePayload, clientReq) {
+  const backoffs = [200, 400];
+  let lastResult;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const base = backoffs[attempt - 1];
+      await sleep(base + Math.floor(Math.random() * 100) - 50);
+    }
+    try {
+      const result = await attemptGeminiCall(googlePayload, clientReq);
+      if (result.ok || !result.retryable) return result;
+      lastResult = result;
+    } catch (err) {
+      if (err && err.timeout) {
+        lastResult = {
+          ok: false,
+          retryable: attempt < MAX_RETRIES,
+          clientStatus: 504,
+          body: JSON.stringify({ error: 'error_timeout' }),
+        };
+        if (!lastResult.retryable) return lastResult;
+      } else {
+        return { ok: false, retryable: false, clientStatus: 500, body: JSON.stringify({ error: 'error_process' }) };
+      }
+    }
+  }
+
+  return lastResult || { ok: false, retryable: false, clientStatus: 502, body: JSON.stringify({ error: 'error_upstream' }) };
+}
+
+// ---------------------------------------------------------------------------
+// Server factory
 // ---------------------------------------------------------------------------
 function createApp() {
   return http.createServer(async (req, res) => {
@@ -291,25 +436,16 @@ function createApp() {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
     } else if (origin) {
-      if (req.method === 'OPTIONS') {
-        res.writeHead(403);
-        res.end('Forbidden');
-        return;
-      }
+      if (req.method === 'OPTIONS') { res.writeHead(403); res.end('Forbidden'); return; }
     }
 
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
+    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
     if (req.method === 'POST' && req.url === '/api/generate') {
 
-      // GP55-015: enforce Content-Type application/json
       const contentType = req.headers['content-type'] || '';
       if (!contentType.includes('application/json')) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -317,16 +453,14 @@ function createApp() {
         return;
       }
 
-      // GP55-002: per-IP rate limit
       const clientIp = getClientIp(req);
       if (!checkRateLimit(clientIp)) {
         const { windowMs } = getRateLimitConfig();
         res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(Math.ceil(windowMs / 1000)) });
-        res.end(JSON.stringify({ error: 'error_rate_limit', detail: 'Too many requests. Please try again later.' }));
+        res.end(JSON.stringify({ error: 'error_rate_limit', detail: 'Too many requests.' }));
         return;
       }
 
-      // Read body first so CAPTCHA check has access to captchaToken
       let body = '';
       let bodyBytes = 0;
       let bodyTooLarge = false;
@@ -346,19 +480,16 @@ function createApp() {
 
       req.on('end', async () => {
         if (bodyTooLarge) return;
-
         try {
           const payload = JSON.parse(body);
           const { imageBase64, styleId, variationId, captchaToken } = payload;
 
-          // CO4-008: CAPTCHA presence check
           if (!captchaToken || typeof captchaToken !== 'string' || captchaToken.trim() === '') {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'error_captcha', detail: 'Missing or empty captchaToken.' }));
             return;
           }
 
-          // CO4-008 + CO4-002: verify token with Turnstile (includes replay check)
           const captchaValid = await verifyCaptcha(captchaToken.trim());
           if (!captchaValid) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
@@ -366,7 +497,6 @@ function createApp() {
             return;
           }
 
-          // generationEnabled check comes after CAPTCHA so security gates run first
           if (!generationEnabled()) {
             res.writeHead(503, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'error_process', detail: 'Generation is currently disabled.' }));
@@ -393,8 +523,7 @@ function createApp() {
 
           const safeVariationId = VALID_VARIATION_IDS.has(variationId) ? variationId : 'default';
 
-          let validatedMimeType;
-          let cleanBase64;
+          let validatedMimeType, cleanBase64;
           try {
             cleanBase64 = imageBase64.startsWith('data:')
               ? imageBase64.slice(imageBase64.indexOf(',') + 1)
@@ -408,44 +537,22 @@ function createApp() {
           }
 
           const prompt = buildPrompt(styleId, safeVariationId);
-
           const googlePayload = JSON.stringify({
             contents: {
               parts: [
                 { text: prompt },
-                { inlineData: { mimeType: validatedMimeType, data: cleanBase64 } }
-              ]
+                { inlineData: { mimeType: validatedMimeType, data: cleanBase64 } },
+              ],
             },
-            generationConfig: { imageConfig: { aspectRatio: '1:1' } }
+            safetySettings: SAFETY_SETTINGS,
+            generationConfig: { imageConfig: { aspectRatio: '1:1' } },
           });
 
-          const options = {
-            hostname: 'generativelanguage.googleapis.com',
-            port: 443,
-            path: `/v1beta/models/${DEFAULT_MODEL}:generateContent`,
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Content-Length': Buffer.byteLength(googlePayload),
-              'x-goog-api-key': API_KEY
-            }
-          };
-
-          const googleReq = https.request(options, (googleRes) => {
-            res.writeHead(googleRes.statusCode, { 'Content-Type': 'application/json' });
-            googleRes.pipe(res);
-          });
-
-          googleReq.on('error', (e) => {
-            console.error('Google API Request Error:', e);
-            if (!res.headersSent) {
-              res.writeHead(500);
-              res.end(JSON.stringify({ error: 'error_process' }));
-            }
-          });
-
-          googleReq.write(googlePayload);
-          googleReq.end();
+          const result = await callGeminiWithRetry(googlePayload, req);
+          if (!res.headersSent) {
+            res.writeHead(result.clientStatus, { 'Content-Type': 'application/json' });
+            res.end(result.body);
+          }
 
         } catch (e) {
           console.error('Error parsing request body:', e);
@@ -469,7 +576,7 @@ if (require.main === module) {
     console.log(`Backend proxy server running on http://0.0.0.0:${PORT}`);
     console.log(`Generation enabled: ${generationEnabled()}`);
     console.log(`Daily quota limit: ${DAILY_QUOTA_LIMIT}`);
-    console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || '(none - set FRONTEND_ORIGIN env)'}`);
+    console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || '(none)'}`);
     console.log(`Valid styles: ${[...VALID_STYLE_IDS].join(', ')}`);
   });
 }
