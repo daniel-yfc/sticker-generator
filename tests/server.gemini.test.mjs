@@ -1,18 +1,42 @@
 // @vitest-environment node
 import http from 'http';
-import nock from 'nock';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createApp } from '../server.cjs';
 
-// Minimal valid 1x1 PNG
+// Minimal valid 1×1 PNG (hex → base64)
 const VALID_PNG_BASE64 = Buffer.from(
   '89504e470d0a1a0a0000000d49484452000000010000000108020000009001' +
   '2e00000000c4944415478016360f8cfc00000000200015e331de00000000049454e44ae426082',
   'hex'
 ).toString('base64');
 
-const GEMINI_HOST = 'https://generativelanguage.googleapis.com';
-const GEMINI_PATH = /\/v1beta\/models\/gemini-2\.5-flash-image:generateContent/;
+// ---------------------------------------------------------------------------
+// Fake Gemini server helper
+// Starts a local HTTP server; each test pushes response specs into `queue`.
+// ---------------------------------------------------------------------------
+function createFakeGemini() {
+  const queue = [];
+  const server = http.createServer((req, res) => {
+    const spec = queue.shift();
+    if (!spec) { res.writeHead(500); res.end('{}'); return; }
+    const { status = 200, contentType = 'application/json', body = '{}' } = spec;
+    res.writeHead(status, { 'Content-Type': contentType });
+    res.end(body);
+  });
+  return {
+    queue,
+    server,
+    start() {
+      return new Promise(r => server.listen(0, '127.0.0.1', r));
+    },
+    port() {
+      return server.address().port;
+    },
+    stop() {
+      return new Promise(r => server.close(r));
+    },
+  };
+}
 
 function makeBody(overrides = {}) {
   return JSON.stringify({
@@ -28,14 +52,9 @@ function post(port, body) {
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
-        hostname: '127.0.0.1',
-        port,
-        path: '/api/generate',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
-        },
+        hostname: '127.0.0.1', port,
+        path: '/api/generate', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
       },
       (res) => {
         let data = '';
@@ -50,85 +69,100 @@ function post(port, body) {
 }
 
 describe('Wave 4 - Gemini call hardening', () => {
-  let server;
-  let port;
+  let appServer;
+  let appPort;
+  let fakeGemini;
 
   beforeAll(async () => {
-    // Disable CAPTCHA check and generation kill-switch for these tests
-    process.env.GENERATION_ENABLED = 'true';
-    process.env.TURNSTILE_SECRET_KEY = '';
-    process.env.RATE_LIMIT_PER_IP = '1000';
-    process.env.DAILY_QUOTA_LIMIT = '1000';
-    process.env.GEMINI_API_KEY = 'test-key';
-    nock.disableNetConnect();
-    nock.enableNetConnect('127.0.0.1');
-    server = createApp();
-    await new Promise(r => server.listen(0, '127.0.0.1', r));
-    port = server.address().port;
+    fakeGemini = createFakeGemini();
+    await fakeGemini.start();
+
+    // Point server.cjs at our fake Gemini over plain HTTP
+    process.env.GEMINI_API_PROTOCOL = 'http';
+    process.env.GEMINI_API_HOST     = '127.0.0.1';
+    process.env.GEMINI_API_PORT     = String(fakeGemini.port());
+    process.env.GENERATION_ENABLED  = 'true';
+    process.env.TURNSTILE_SECRET_KEY = '';       // skip CAPTCHA
+    process.env.RATE_LIMIT_PER_IP   = '1000';
+    process.env.DAILY_QUOTA_LIMIT   = '1000';
+    process.env.GEMINI_API_KEY      = 'test-key';
+
+    appServer = createApp();
+    await new Promise(r => appServer.listen(0, '127.0.0.1', r));
+    appPort = appServer.address().port;
   });
 
   afterAll(async () => {
-    nock.cleanAll();
-    nock.enableNetConnect();
-    await new Promise(r => server.close(r));
+    await new Promise(r => appServer.close(r));
+    await fakeGemini.stop();
+    delete process.env.GEMINI_API_PROTOCOL;
+    delete process.env.GEMINI_API_HOST;
+    delete process.env.GEMINI_API_PORT;
   });
 
   beforeEach(() => {
-    nock.cleanAll();
+    fakeGemini.queue.length = 0; // clear leftover specs
   });
 
-  // GP55-013A
+  // -------------------------------------------------------------------------
+  // GP55-013A — upstream status mapping
+  // -------------------------------------------------------------------------
   describe('GP55-013A - upstream status mapping', () => {
-    it('AC-upstream-401: Gemini 401 -> client 401 error_auth', async () => {
-      nock(GEMINI_HOST).post(GEMINI_PATH).reply(401, JSON.stringify({ error: 'unauthorized' }), { 'Content-Type': 'application/json' });
-      const res = await post(port, makeBody());
+    it('AC-401: Gemini 401 -> client 401 error_auth', async () => {
+      fakeGemini.queue.push({ status: 401, body: '{}' });
+      const res = await post(appPort, makeBody());
       expect(res.status).toBe(401);
       expect(JSON.parse(res.body).error).toBe('error_auth');
     });
 
-    it('AC-upstream-429: Gemini 429 -> client 429 error_quota', async () => {
-      nock(GEMINI_HOST).post(GEMINI_PATH).reply(429, JSON.stringify({ error: 'quota' }), { 'Content-Type': 'application/json' });
-      const res = await post(port, makeBody());
+    it('AC-429: Gemini 429 -> client 429 error_quota (no retry)', async () => {
+      fakeGemini.queue.push({ status: 429, body: '{}' });
+      const res = await post(appPort, makeBody());
       expect(res.status).toBe(429);
       expect(JSON.parse(res.body).error).toBe('error_quota');
     });
 
-    it('AC-upstream-503: Gemini 503 -> client 502 error_upstream', async () => {
-      nock(GEMINI_HOST).post(GEMINI_PATH).times(3).reply(503, JSON.stringify({ error: 'unavailable' }), { 'Content-Type': 'application/json' });
-      const res = await post(port, makeBody());
+    it('AC-503: Gemini 503 x3 -> client 502 error_upstream (retries exhausted)', async () => {
+      fakeGemini.queue.push({ status: 503, body: '{}' });
+      fakeGemini.queue.push({ status: 503, body: '{}' });
+      fakeGemini.queue.push({ status: 503, body: '{}' });
+      const res = await post(appPort, makeBody());
       expect(res.status).toBe(502);
       expect(JSON.parse(res.body).error).toBe('error_upstream');
     });
   });
 
-  // DS4-23
+  // -------------------------------------------------------------------------
+  // DS4-23 — non-JSON upstream response
+  // -------------------------------------------------------------------------
   describe('DS4-23 - non-JSON upstream response', () => {
-    it('AC-nonjson: HTML error page from upstream -> 502 error_upstream', async () => {
-      nock(GEMINI_HOST).post(GEMINI_PATH).reply(200, '<html>Bad Gateway</html>', { 'Content-Type': 'text/html' });
-      const res = await post(port, makeBody());
+    it('AC-nonjson: HTML upstream -> 502 error_upstream', async () => {
+      fakeGemini.queue.push({ status: 200, contentType: 'text/html', body: '<html>Bad Gateway</html>' });
+      const res = await post(appPort, makeBody());
       expect(res.status).toBe(502);
       expect(JSON.parse(res.body).error).toBe('error_upstream');
     });
   });
 
-  // GP55-008A
+  // -------------------------------------------------------------------------
+  // GP55-008A — safety block + happy path
+  // -------------------------------------------------------------------------
   describe('GP55-008A - safety block handling', () => {
     it('AC-safety: promptFeedback.blockReason -> 200 error_safety', async () => {
-      const blocked = JSON.stringify({
-        promptFeedback: { blockReason: 'SAFETY' },
+      fakeGemini.queue.push({
+        body: JSON.stringify({ promptFeedback: { blockReason: 'SAFETY' } }),
       });
-      nock(GEMINI_HOST).post(GEMINI_PATH).reply(200, blocked, { 'Content-Type': 'application/json' });
-      const res = await post(port, makeBody());
+      const res = await post(appPort, makeBody());
       expect(res.status).toBe(200);
       expect(JSON.parse(res.body).error).toBe('error_safety');
     });
 
-    it('AC-success: valid generation response passes through', async () => {
+    it('AC-success: valid generation passes through', async () => {
       const success = JSON.stringify({
         candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'abc' } }] } }],
       });
-      nock(GEMINI_HOST).post(GEMINI_PATH).reply(200, success, { 'Content-Type': 'application/json' });
-      const res = await post(port, makeBody());
+      fakeGemini.queue.push({ body: success });
+      const res = await post(appPort, makeBody());
       expect(res.status).toBe(200);
       const parsed = JSON.parse(res.body);
       expect(parsed.error).toBeUndefined();
@@ -136,22 +170,26 @@ describe('Wave 4 - Gemini call hardening', () => {
     });
   });
 
-  // CO4-011
+  // -------------------------------------------------------------------------
+  // CO4-011 — retry on 5xx
+  // -------------------------------------------------------------------------
   describe('CO4-011 - retry on 5xx', () => {
     it('AC-retry-success: 5xx then 200 -> success on retry', async () => {
       const success = JSON.stringify({
         candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'abc' } }] } }],
       });
-      nock(GEMINI_HOST).post(GEMINI_PATH).reply(503, '{}', { 'Content-Type': 'application/json' });
-      nock(GEMINI_HOST).post(GEMINI_PATH).reply(200, success, { 'Content-Type': 'application/json' });
-      const res = await post(port, makeBody());
+      fakeGemini.queue.push({ status: 503, body: '{}' });
+      fakeGemini.queue.push({ body: success });
+      const res = await post(appPort, makeBody());
       expect(res.status).toBe(200);
       expect(JSON.parse(res.body).candidates).toBeDefined();
     });
 
     it('AC-retry-exhaust: 3x 5xx -> 502 error_upstream', async () => {
-      nock(GEMINI_HOST).post(GEMINI_PATH).times(3).reply(503, '{}', { 'Content-Type': 'application/json' });
-      const res = await post(port, makeBody());
+      fakeGemini.queue.push({ status: 503, body: '{}' });
+      fakeGemini.queue.push({ status: 503, body: '{}' });
+      fakeGemini.queue.push({ status: 503, body: '{}' });
+      const res = await post(appPort, makeBody());
       expect(res.status).toBe(502);
       expect(JSON.parse(res.body).error).toBe('error_upstream');
     });

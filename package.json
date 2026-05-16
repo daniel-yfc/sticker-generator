@@ -26,7 +26,6 @@
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/coverage-v8": "^4.0.18",
     "jsdom": "^28.1.0",
-    "nock": "^14.0.5",
     "tailwindcss": "^4.2.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
