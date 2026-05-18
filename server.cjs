@@ -4,6 +4,12 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+const {
+  buildPrompt,
+  VALID_STYLE_IDS,
+  VALID_VARIATION_IDS,
+} = require('./server/promptBuilder.cjs');
+
 // ---------------------------------------------------------------------------
 // Environment loader
 // ---------------------------------------------------------------------------
@@ -81,43 +87,9 @@ function isOriginAllowed(origin) {
 const MAX_BODY_BYTES = 15 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
-// GP55-001 / GP55-009: Server-owned model allowlist and prompt table
+// GP55-001 / GP55-009: Server-owned model allowlist
 // ---------------------------------------------------------------------------
 const DEFAULT_MODEL = 'gemini-2.5-flash-image';
-
-const VARIATION_FRAGMENTS = {
-  thumbs_up: 'Expression/Action: giving a thumbs up, cheerful.',
-  laughing:  'Expression/Action: laughing heartily, mouth open, joyful.',
-  surprised: 'Expression/Action: eyes wide open, surprised expression.',
-  cool:      'Expression/Action: cool and confident, slight smirk.',
-  default:   'Expression: Expressive and charismatic.',
-};
-
-const VALID_VARIATION_IDS = new Set(Object.keys(VARIATION_FRAGMENTS));
-
-const STYLE_PROMPTS = {
-  'chibi-anime':    { base: 'Chibi anime style, big expressive eyes, simplified cute proportions, vibrant colors', person: 'adorable chibi character' },
-  'pixar-3d':       { base: 'Pixar/Disney 3D animation style, smooth surfaces, expressive face, warm lighting', person: 'charming 3D animated character' },
-  'flat-vector':    { base: 'Flat vector illustration, bold outlines, minimal shading, clean geometric shapes', person: 'stylized flat vector person' },
-  'watercolor':     { base: 'Watercolor painting style, soft edges, translucent washes, artistic brushwork', person: 'watercolor portrait character' },
-  'comic-book':     { base: 'Comic book style, bold ink outlines, halftone shading, dynamic composition', person: 'comic book hero character' },
-  'sticker-pop':    { base: 'Bold pop-art sticker style, high contrast colors, thick outlines, playful energy', person: 'pop-art sticker character' },
-  'sketch':         { base: 'Hand-drawn pencil sketch style, expressive lines, cross-hatching, artistic texture', person: 'sketched portrait character' },
-  'neon-cyberpunk': { base: 'Neon cyberpunk style, glowing edges, dark background elements, futuristic details', person: 'cyberpunk character with neon accents' },
-  'minimalist':     { base: 'Minimalist style, simple clean lines, limited color palette, essential details only', person: 'minimalist stylized person' },
-  'retro-cartoon':  { base: 'Retro cartoon style, vintage animation aesthetic, bold lines, classic cartoon proportions', person: 'retro cartoon character' },
-  'oil-painting':   { base: 'Oil painting style, rich textured brushstrokes, classical portrait composition, depth', person: 'oil painted portrait character' },
-  'emoji-style':    { base: 'Emoji/emoticon style, simple expressive face, bold outlines, bright flat colors', person: 'emoji-style face character' },
-};
-
-const VALID_STYLE_IDS = new Set(Object.keys(STYLE_PROMPTS));
-
-function buildPrompt(styleId, variationId) {
-  const style = STYLE_PROMPTS[styleId];
-  const variationFragment = VARIATION_FRAGMENTS[variationId] || VARIATION_FRAGMENTS.default;
-  const styleDescription = `${style.base}, depicting a ${style.person}`;
-  return `Generate a high-quality die-cut sticker of the person in the provided image.\n\nART STYLE: ${styleDescription}.\n\nCRITICAL INSTRUCTIONS:\n1. TRANSFORM the subject into a stylistic illustration matching the Art Style.\n2. DO NOT produce a realistic photo. The result must look like a drawing, painting, or 3D render.\n3. SIMPLIFY details to match the sticker aesthetic.\n4. Add a thick, clean WHITE BORDER surrounding the subject (die-cut style).\n5. Use a solid white background.\n\n${variationFragment}`;
-}
 
 // ---------------------------------------------------------------------------
 // GP55-006: Server-side image validation (magic bytes, size, dimensions)
@@ -217,15 +189,12 @@ function checkRateLimit(ip) {
 
 // ---------------------------------------------------------------------------
 // CO4-008 + CO4-002: Turnstile CAPTCHA verification
-// Token TTL: verified tokens are cached for CAPTCHA_TOKEN_TTL_MS to allow set
-// generation (4 variations share one token). Replay outside TTL is rejected.
-// CAPTCHA_TOKEN_TTL_MS env var overrides default (300000ms = 5 min).
 // ---------------------------------------------------------------------------
 function getCaptchaTokenTtl() {
   return parseInt(process.env.CAPTCHA_TOKEN_TTL_MS || '300000', 10);
 }
 
-const verifiedCaptchaTokens = new Map(); // token -> verifiedAt (ms)
+const verifiedCaptchaTokens = new Map();
 
 function pruneExpiredTokens() {
   const ttl = getCaptchaTokenTtl();
@@ -244,7 +213,6 @@ async function verifyCaptcha(token) {
 
   pruneExpiredTokens();
 
-  // Within TTL: reuse previous verification (allows set generation with same token)
   const existing = verifiedCaptchaTokens.get(token);
   if (existing !== undefined) {
     if (Date.now() - existing <= getCaptchaTokenTtl()) return true;
@@ -287,7 +255,6 @@ async function verifyCaptcha(token) {
 
 // ---------------------------------------------------------------------------
 // Wave 5: Structured error response helper
-// All error paths use { error: { code, publicKey, retryable, requestId } }
 // ---------------------------------------------------------------------------
 function errorBody(code, retryable = false) {
   return JSON.stringify({
@@ -545,7 +512,11 @@ function createApp() {
             return;
           }
 
-          const safeVariationId = VALID_VARIATION_IDS.has(variationId) ? variationId : 'default';
+          if (!variationId || !VALID_VARIATION_IDS.has(variationId)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(errorBody('error_payload'));
+            return;
+          }
 
           let validatedMimeType, cleanBase64;
           try {
@@ -560,7 +531,7 @@ function createApp() {
             return;
           }
 
-          const prompt = buildPrompt(styleId, safeVariationId);
+          const prompt = buildPrompt(styleId, variationId);
           const googlePayload = JSON.stringify({
             contents: {
               parts: [

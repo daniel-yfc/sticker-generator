@@ -15,7 +15,7 @@ View your app in AI Studio (if applicable): https://ai.studio/apps/5dd86bf7-d123
 *   **12 Distinct Art Styles:** Choose from a wide variety of styles including Modern Vector, Analog Marker, Ligne Claire, Retro Risograph, 3D Stylized, Artistic Watercolor, Tech Industrial, Dynamic Comic, Colored Pencil, Rubber Hose, Dark Film Noir, and Impasto Oil.
 *   **Photo Upload & Editing:** Upload your favorite portraits (JPG/PNG). Features an intuitive image editor allowing zoom, pan, and rotation to frame your subject perfectly. Max file size: 10MB.
 *   **AI Background Removal & Stylization:** The app leverages the Gemini API to intelligently remove backgrounds, isolate the subject, and apply the selected artistic style with a clean white die-cut border.
-*   **Sticker Set Generation:** Generate an expanded set of 3 stickers from a single photo, keeping the style consistent but varying the expressions (e.g., thumbs up, laughing, surprised).
+*   **Sticker Set Generation:** Generate an expanded set of 4 stickers from a single photo, keeping the style consistent but varying the expressions (e.g., thumbs up, laughing, surprised, cool).
 *   **Local History & Gallery:** Automatically saves your created stickers to your local browser history (Collection). Browse a curated Sample Gallery to get inspired.
 *   **Multi-language Support:** UI available in English, Traditional Chinese (`zh-TW`), and Japanese (`ja`).
 
@@ -23,7 +23,7 @@ View your app in AI Studio (if applicable): https://ai.studio/apps/5dd86bf7-d123
 
 *   **Max File Size:** 10MB per upload.
 *   **Supported Formats:** JPG, PNG (Clear portrait recommended).
-*   **Resolution:** Generated stickers are output as 512x512px PNG images.
+*   **Output:** Generated stickers are exported as PNG images suitable for download.
 *   **API Rate Limiting:** The app implements a custom rate limiter (`stickerGenerationLimiter`) to prevent API abuse. Sticker set generation uses a throttled map with a concurrency limit of 2 to avoid overwhelming the Gemini API.
 *   **Processing Timeout:** The UI will timeout if a response from the API takes longer than 70 seconds. The backend API call has a strict 60-second timeout.
 *   **Safety Filters:** The app handles API safety block responses and alerts the user to upload a different image if safety filters are triggered.
@@ -42,6 +42,13 @@ View your app in AI Studio (if applicable): https://ai.studio/apps/5dd86bf7-d123
 ## User Build Must-Know (Local Setup)
 
 To run this application locally, you will need Node.js installed on your machine and a valid Google Gemini API key.
+
+### Architecture
+
+This app uses a **backend proxy** pattern:
+- The frontend (Vite/React) sends image and style requests to a local Node.js backend (`server.cjs`).
+- The backend validates the request, applies server-side prompt construction, and calls the **Google Gemini API**.
+- The Gemini API key is never exposed to the browser.
 
 ### Prerequisites
 
@@ -63,16 +70,30 @@ To run this application locally, you will need Node.js installed on your machine
     ```
 
 3.  **Environment Variables (`.env.local`):**
-    You must provide your Gemini API key for the application to function.
     Create a `.env.local` file in the root directory of the project:
     ```bash
     touch .env.local
     ```
-    Add your API key to the file:
+    Add the following variables as needed:
     ```env
+    # Required
     GEMINI_API_KEY=your_gemini_api_key_here
+
+    # Server
+    BACKEND_PORT=3001
+    FRONTEND_ORIGIN=http://localhost:3000
+    GENERATION_ENABLED=true
+
+    # Cloudflare Turnstile (CAPTCHA)
+    TURNSTILE_SECRET_KEY=your_turnstile_secret_key
+    VITE_TURNSTILE_SITE_KEY=your_turnstile_site_key
+
+    # Optional quota / rate-limit overrides
+    DAILY_QUOTA_LIMIT=200
+    RATE_LIMIT_PER_IP=5
+    RATE_LIMIT_WINDOW_MS=60000
+    CAPTCHA_TOKEN_TTL_MS=300000
     ```
-    *(Note: The `vite.config.ts` maps `GEMINI_API_KEY` to `process.env.API_KEY` which is used by the application).*
 
 4.  **Start the Development Server:**
     ```bash
