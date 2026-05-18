@@ -1,1 +1,234 @@
-aW1wb3J0IFJlYWN0LCB7IHVzZVJlZiwgdXNlU3RhdGUsIHVzZUVmZmVjdCB9IGZyb20gJ3JlYWN0JzsKaW1wb3J0IHsgUm90YXRlQ3csIFpvb21JbiwgTW92ZSwgQ2hlY2ssIFggfSBmcm9tICdsdWNpZGUtcmVhY3QnOwoKaW50ZXJmYWNlIEltYWdlRWRpdG9yUHJvcHMgewogIGltYWdlU3JjOiBzdHJpbmc7CiAgb25Db25maXJtOiAocHJvY2Vzc2VkSW1hZ2U6IHN0cmluZykgPT4gdm9pZDsKICBvbkNhbmNlbDogKCkgPT4gdm9pZDsKICB0OiAoa2V5OiBzdHJpbmcpID0+IHN0cmluZzsKfQoKY29uc3QgUEFUVEVSTl9TSVpFID0gMjA7CmxldCBzaGFyZWRQYXR0ZXJuOiBDYW52YXNQYXR0ZXJuIHwgbnVsbCA9IG51bGw7Cgpjb25zdCBJbWFnZUVkaXRvcjogUmVhY3QuRkM8SW1hZ2VFZGl0b3JQcm9wcz4gPSAoeyBpbWFnZVNyYywgb25Db25maXJtLCBvbkNhbmNlbCwgdCB9KSA9PiB7CiAgY29uc3QgY2FudmFzUmVmID0gdXNlUmVmPEhUTUxDYW52YXNFbGVtZW50PihudWxsKTsKICBjb25zdCBbaW1hZ2UsIHNldEltYWdlXSA9IHVzZVN0YXRlPEhUTUxJbWFnZUVsZW1lbnQgfCBudWxsPihudWxsKTsKICBjb25zdCBbc2NhbGUsIHNldFNjYWxlXSA9IHVzZVN0YXRlKDEpOwogIGNvbnN0IFtyb3RhdGlvbiwgc2V0Um90YXRpb25dID0gdXNlU3RhdGUoMCk7CiAgY29uc3QgW3Bvc2l0aW9uLCBzZXRQb3NpdGlvbl0gPSB1c2VTdGF0ZSh7IHg6IDAsIHk6IDAgfSk7CiAgY29uc3QgW2lzRHJhZ2dpbmcsIHNldElzRHJhZ2dpbmddID0gdXNlU3RhdGUoZmFsc2UpOwogIGNvbnN0IFtkcmFnU3RhcnQsIHNldERyYWdTdGFydF0gPSB1c2VTdGF0ZSh7IHg6IDAsIHk6IDAgfSk7CiAgY29uc3QgcmFmUmVmID0gdXNlUmVmPG51bWJlciB8IG51bGw+KG51bGwpOwoKICB1c2VFZmZlY3QoKCkgPT4gewogICAgcmV0dXJuICgpID0+IHsKICAgICAgaWYgKHJhZlJlZi5jdXJyZW50ICE9PSBudWxsKSB7CiAgICAgICAgY2FuY2VsQW5pbWF0aW9uRnJhbWUocmFmUmVmLmN1cnJlbnQpOwogICAgICB9CiAgICB9OwogIH0sIFtdKTsKCgogIC8vIExvYWQgaW1hZ2UKICB1c2VFZmZlY3QoKCkgPT4gewogICAgY29uc3QgaW1nID0gbmV3IEltYWdlKCk7CiAgICBpbWcuc3JjID0gaW1hZ2VTcmM7CiAgICBpbWcub25sb2FkID0gKCkgPT4gewogICAgICBzZXRJbWFnZShpbWcpOwogICAgICAvLyBJbml0aWFsIGNlbnRlciBwb3NpdGlvbgogICAgICBzZXRQb3NpdGlvbih7IHg6IDAsIHk6IDAgfSk7CiAgICB9OwogIH0sIFtpbWFnZVNyY10pOwoKICAvLyBEcmF3IGNhbnZhcwogIHVzZUVmZmVjdCgoKSA9PiB7CiAgICBjb25zdCBjYW52YXMgPSBjYW52YXNSZWYuY3VycmVudDsKICAgIGlmICghY2FudmFzIHx8ICFpbWFnZSkgcmV0dXJuOwoKICAgIGNvbnN0IGN0eCA9IGNhbnZhcy5nZXRDb250ZXh0KCcyZCcpOwogICAgaWYgKCFjdHgpIHJldHVybjsKCiAgICAvLyBTZXQgY2FudmFzIHNpemUgKGRpc3BsYXkgc2l6ZSkKICAgIGNvbnN0IENBTlZBU19TSVpFID0gNDAwOwogICAgY2FudmFzLndpZHRoID0gQ0FOVkFTX1NJWkU7CiAgICBjYW52YXMuaGVpZ2h0ID0gQ0FOVkFTX1NJWkU7CgogICAgLy8gQ2xlYXIgYmFja2dyb3VuZAogICAgY3R4LmNsZWFyUmVjdCgwLCAwLCBjYW52YXMud2lkdGgsIGNhbnZhcy5oZWlnaHQpOwogICAgCiAgICAvLyBEcmF3IHRyYW5zcGFyZW50IGdyaWQgYmFja2dyb3VuZAogICAgLy8gQmFzZSBmaWxsIGFzIGZhbGxiYWNrCiAgICBjdHguZmlsbFN0eWxlID0gJyNmMGYwZjAnOwogICAgY3R4LmZpbGxSZWN0KDAsIDAsIGNhbnZhcy53aWR0aCwgY2FudmFzLmhlaWdodCk7CgogICAgaWYgKCFzaGFyZWRQYXR0ZXJuKSB7CiAgICAgIGNvbnN0IHBDYW52YXMgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdjYW52YXMnKTsKICAgICAgcENhbnZhcy53aWR0aCA9IFBBVFRFUk5fU0laRSAqIDI7CiAgICAgIHBDYW52YXMuaGVpZ2h0ID0gUEFUVEVSTl9TSVpFICogMjsKICAgICAgY29uc3QgcEN0eCA9IHBDYW52YXMuZ2V0Q29udGV4dCgnMmQnKTsKICAgICAgaWYgKHBDdHgpIHsKICAgICAgICBwQ3R4LmZpbGxTdHlsZSA9ICcjZjBmMGYwJzsKICAgICAgICBwQ3R4LmZpbGxSZWN0KDAsIDAsIHBDYW52YXMud2lkdGgsIHBDYW52YXMuaGVpZ2h0KTsKICAgICAgICBwQ3R4LmZpbGxTdHlsZSA9ICcjZGRkJzsKICAgICAgICBwQ3R4LmZpbGxSZWN0KDAsIDAsIFBBVFRFUk5fU0laRSwgUEFUVEVSTl9TSVpFKTsKICAgICAgICBwQ3R4LmZpbGxSZWN0KFBBVFRFUk5fU0laRSwgUEFUVEVSTl9TSVpFLCBQQVRURVJOX1NJWkUsIFBBVFRFUk5fU0laRSk7CiAgICAgICAgc2hhcmVkUGF0dGVybiA9IGN0eC5jcmVhdGVQYXR0ZXJuKHBDYW52YXMsICdyZXBlYXQnKTsKICAgICAgfQogICAgfQoKICAgIGlmIChzaGFyZWRQYXR0ZXJuKSB7CiAgICAgIGN0eC5maWxsU3R5bGUgPSBzaGFyZWRQYXR0ZXJuOwogICAgICBjdHguZmlsbFJlY3QoMCwgMCwgY2FudmFzLndpZHRoLCBjYW52YXMuaGVpZ2h0KTsKICAgIH0KCiAgICBjdHguc2F2ZSgpOwogICAgCiAgICAvLyBNb3ZlIHRvIGNlbnRlcgogICAgY3R4LnRyYW5zbGF0ZShjYW52YXMud2lkdGggLyAyLCBjYW52YXMuaGVpZ2h0IC8gMik7CiAgICBjdHgucm90YXRlKChyb3RhdGlvbiAqIE1hdGguUEkpIC8gMTgwKTsKICAgIGN0eC5zY2FsZShzY2FsZSwgc2NhbGUpOwogICAgY3R4LnRyYW5zbGF0ZShwb3NpdGlvbi54LCBwb3NpdGlvbi55KTsKCiAgICAvLyBEcmF3IGltYWdlIGNlbnRlcmVkCiAgICAvLyBDYWxjdWxhdGUgYXNwZWN0IHJhdGlvIGZpdAogICAgY29uc3Qgc2NhbGVGYWN0b3IgPSBNYXRoLm1pbihjYW52YXMud2lkdGggLyBpbWFnZS53aWR0aCwgY2FudmFzLmhlaWdodCAvIGltYWdlLmhlaWdodCkgKiAwLjg7CiAgICBjb25zdCBkcmF3V2lkdGggPSBpbWFnZS53aWR0aCAqIHNjYWxlRmFjdG9yOwogICAgY29uc3QgZHJhd0hlaWdodCA9IGltYWdlLmhlaWdodCAqIHNjYWxlRmFjdG9yOwogICAgCiAgICBjdHguZHJhd0ltYWdlKAogICAgICBpbWFnZSwKICAgICAgLWRyYXdXaWR0aCAvIDIsCiAgICAgIC1kcmF3SGVpZ2h0IC8gMiwKICAgICAgZHJhd1dpZHRoLAogICAgICBkcmF3SGVpZ2h0CiAgICApOwoKICAgIGN0eC5yZXN0b3JlKCk7CgogICAgLy8gRHJhdyBvdmVybGF5IGNpcmNsZS9mcmFtZSBndWlkZQogICAgY3R4LnN0cm9rZVN0eWxlID0gJyM0RjQ2RTUnOwogICAgY3R4LmxpbmVXaWR0aCA9IDI7CiAgICBjdHguc2V0TGluZURhc2goWzEwLCA1XSk7CiAgICBjdHguYmVnaW5QYXRoKCk7CiAgICBjdHguYXJjKGNhbnZhcy53aWR0aCAvIDIsIGNhbnZhcy5oZWlnaHQgLyAyLCBjYW52YXMud2lkdGggKiAwLjQ1LCAwLCBNYXRoLlBJICogMik7CiAgICBjdHguc3Ryb2tlKCk7CgogIH0sIFtpbWFnZSwgc2NhbGUsIHJvdGF0aW9uLCBwb3NpdGlvbl0pOwoKICBjb25zdCBoYW5kbGVNb3VzZURvd24gPSAoZTogUmVhY3QuTW91c2VFdmVudCB8IFJlYWN0LlRvdWNoRXZlbnQpID0+IHsKICAgIHNldElzRHJhZ2dpbmcodHJ1ZSk7CiAgICBjb25zdCBjbGllbnRYID0gJ3RvdWNoZXMnIGluIGUgPyBlLnRvdWNoZXNbMF0uY2xpZW50WCA6IChlIGFzIFJlYWN0Lk1vdXNlRXZlbnQpLmNsaWVudFg7CiAgICBjb25zdCBjbGllbnRZID0gJ3RvdWNoZXMnIGluIGUgPyBlLnRvdWNoZXNbMF0uY2xpZW50WSA6IChlIGFzIFJlYWN0Lk1vdXNlRXZlbnQpLmNsaWVudFk7CiAgICBzZXREcmFnU3RhcnQoeyB4OiBjbGllbnRYIC0gcG9zaXRpb24ueCwgeTogY2xpZW50WSAtIHBvc2l0aW9uLnkgfSk7CiAgfTsKCiAgY29uc3QgaGFuZGxlTW91c2VNb3ZlID0gKGU6IFJlYWN0Lk1vdXNlRXZlbnQgfCBSZWFjdC5Ub3VjaEV2ZW50KSA9PiB7CiAgICBpZiAoIWlzRHJhZ2dpbmcpIHJldHVybjsKCiAgICBpZiAocmFmUmVmLmN1cnJlbnQgIT09IG51bGwpIHsKICAgICAgY2FuY2VsQW5pbWF0aW9uRnJhbWUocmFmUmVmLmN1cnJlbnQpOwogICAgfQoKICAgIGNvbnN0IGNsaWVudFggPSAndG91Y2hlcycgaW4gZSA/IGUudG91Y2hlc1swXS5jbGllbnRYIDogKGUgYXMgUmVhY3QuTW91c2VFdmVudCkuY2xpZW50WDsKICAgIGNvbnN0IGNsaWVudFkgPSAndG91Y2hlcycgaW4gZSA/IGUudG91Y2hlc1swXS5jbGllbnRZIDogKGUgYXMgUmVhY3QuTW91c2VFdmVudCkuY2xpZW50WTsKICAgIAogICAgY29uc3QgZHggPSBjbGllbnRYIC0gZHJhZ1N0YXJ0Lng7CiAgICBjb25zdCBkeSA9IGNsaWVudFkgLSBkcmFnU3RhcnQueTsKICAgIAogICAgcmFmUmVmLmN1cnJlbnQgPSByZXF1ZXN0QW5pbWF0aW9uRnJhbWUoKCkgPT4gewogICAgICBsZXQgcm90UmFkID0gKC1yb3RhdGlvbiAqIE1hdGguUEkpIC8gMTgwOwogICAgICBjb25zdCByb3RhdGVkRHggPSBkeCAqIE1hdGguY29zKHJvdFJhZCkgLSBkeSAqIE1hdGguc2luKHJvdFJhZCk7CiAgICAgIGNvbnN0IHJvdGF0ZWREeSA9IGR4ICogTWF0aC5zaW4ocm90UmFkKSArIGR5ICogTWF0aC5jb3Mocm90UmFkKTsKCiAgICAgIHNldFBvc2l0aW9uKHsKICAgICAgICB4OiByb3RhdGVkRHggLyBzY2FsZSwKICAgICAgICB5OiByb3RhdGVkRHkgLyBzY2FsZQogICAgICB9KTsKICAgICAgcmFmUmVmLmN1cnJlbnQgPSBudWxsOwogICAgfSk7CiAgfTsKCiAgY29uc3QgaGFuZGxlTW91c2VVcCA9ICgpID0+IHsKICAgIHNldElzRHJhZ2dpbmcoZmFsc2UpOwogIH07CgogIGNvbnN0IGhhbmRsZUNvbmZpcm0gPSAoKSA9PiB7CiAgICBpZiAoIWltYWdlKSByZXR1cm47CgogICAgY29uc3QgRVhQT1JUX1NJWkUgPSA1MTI7CiAgICBjb25zdCBleHBvcnRDYW52YXMgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdjYW52YXMnKTsKICAgIGV4cG9ydENhbnZhcy53aWR0aCA9IEVYUE9SVF9TSVpFOwogICAgZXhwb3J0Q2FudmFzLmhlaWdodCA9IEVYUE9SVF9TSVpFOwoKICAgIGNvbnN0IGN0eCA9IGV4cG9ydENhbnZhcy5nZXRDb250ZXh0KCcyZCcpOwogICAgaWYgKCFjdHgpIHJldHVybjsKCiAgICAvLyBTY2FsZSB0cmFuc2Zvcm0gbWF0aCBmcm9tIGRpc3BsYXkgKDQwMHB4KSB0byBleHBvcnQgKDUxMnB4KQogICAgY29uc3QgRElTUExBWV9TSVpFID0gNDAwOwogICAgY29uc3QgZXhwb3J0UmF0aW8gPSBFWFBPUlRfU0laRSAvIERJU1BMQVlfU0laRTsKCiAgICBjdHguc2F2ZSgpOwogICAgY3R4LnRyYW5zbGF0ZShFWFBPUlRfU0laRSAvIDIsIEVYUE9SVF9TSVpFIC8gMik7CiAgICBjdHgucm90YXRlKChyb3RhdGlvbiAqIE1hdGguUEkpIC8gMTgwKTsKICAgIGN0eC5zY2FsZShzY2FsZSAqIGV4cG9ydFJhdGlvLCBzY2FsZSAqIGV4cG9ydFJhdGlvKTsKICAgIGN0eC50cmFuc2xhdGUocG9zaXRpb24ueCwgcG9zaXRpb24ueSk7CgogICAgY29uc3Qgc2NhbGVGYWN0b3IgPSBNYXRoLm1pbihESVNQTEFZX1NJWkUgLyBpbWFnZS53aWR0aCwgRElTUExBWV9TSVpFIC8gaW1hZ2UuaGVpZ2h0KSAqIDAuODsKICAgIGNvbnN0IGRyYXdXaWR0aCA9IGltYWdlLndpZHRoICogc2NhbGVGYWN0b3I7CiAgICBjb25zdCBkcmF3SGVpZ2h0ID0gaW1hZ2UuaGVpZ2h0ICogc2NhbGVGYWN0b3I7CgogICAgY3R4LmRyYXdJbWFnZShpbWFnZSwgLWRyYXdXaWR0aCAvIDIsIC1kcmF3SGVpZ2h0IC8gMiwgZHJhd1dpZHRoLCBkcmF3SGVpZ2h0KTsKICAgIGN0eC5yZXN0b3JlKCk7CgogICAgb25Db25maXJtKGV4cG9ydENhbnZhcy50b0RhdGFVUkwoJ2ltYWdlL3BuZycpKTsKICB9OwoKICByZXR1cm4gKAogICAgPGRpdiBjbGFzc05hbWU9ImJnLXdoaXRlIHJvdW5kZWQtMnhsIHNoYWRvdy14bCBib3JkZXIgYm9yZGVyLWdyYXktMjAwIG92ZXJmbG93LWhpZGRlbiBtYXgtdy14bCBteC1hdXRvIj4KICAgICAgPGRpdiBjbGFzc05hbWU9InAtNCBib3JkZXItYiBib3JkZXItZ3JheS0xMDAgYmctZ3JheS01MCBmbGV4IGp1c3RpZnktYmV0d2VlbiBpdGVtcy1jZW50ZXIiPgogICAgICAgIDxoMyBjbGFzc05hbWU9ImZvbnQtYm9sZCB0ZXh0LWdyYXktODAwIGZsZXggaXRlbXMtY2VudGVyIGdhcC0yIj4KICAgICAgICAgIDxNb3ZlIGNsYXNzTmFtZT0idy00IGgtNCB0ZXh0LWluZGlnby02MDAiIC8+CiAgICAgICAgICB7dCgnZWRpdG9yX3RpdGxlJyl9CiAgICAgICAgPC9oMz4KICAgICAgICA8YnV0dG9uIG9uQ2xpY2s9e29uQ2FuY2VsfSBjbGFzc05hbWU9InRleHQtZ3JheS00MDAgaG92ZXI6dGV4dC1ncmF5LTYwMCI+CiAgICAgICAgICA8WCBjbGFzc05hbWU9Incta SBoLTUiIC8+CiAgICAgICAgPC9idXR0b24+CiAgICAgIDwvZGl2PgoKICAgICAgPGRpdiBjbGFzc05hbWU9InAtNCBiZy1ncmF5LTEwMCBmbGV4IGp1c3RpZnktY2VudGVyIG92ZXJmbG93LWhpZGRlbiB0b3VjaC1ub25lIHJlbGF0aXZlIj4KICAgICAgICA8Y2FudmFzCiAgICAgICAgICByZWY9e2NhbnZhc1JlZn0KICAgICAgICAgIGNsYXNzTmFtZT0icm91bmRlZC1sZyBzaGFkb3ctc20gY3Vyc29yLW1vdmUgYmctd2hpdGUiCiAgICAgICAgICBvbk1vdXNlRG93bj17aGFuZGxlTW91c2VEb3dufQogICAgICAgICAgb25Nb3VzZU1vdmU9e2hhbmRsZU1vdXNlTW92ZX0KICAgICAgICAgIG9uTW91c2VVcD17aGFuZGxlTW91c2VVcH0KICAgICAgICAgIG9uTW91c2VMZWF2ZT17aGFuZGxlTW91c2VVcH0KICAgICAgICAgIG9uVG91Y2hTdGFydD17aGFuZGxlTW91c2VEb3dufQogICAgICAgICAgb25Ub3VjaE1vdmU9e2hhbmRsZU1vdXNlTW92ZX0KICAgICAgICAgIG9uVG91Y2hFbmQ9e2hhbmRsZU1vdXNlVXB9CiAgICAgICAgLz4KICAgICAgICA8ZGl2IGNsYXNzTmFtZT0iYWJzb2x1dGUgYm90dG9tLTYgbGVmdC0xLzIgdHJhbnNmb3JtIC10cmFuc2xhdGUteC0xLzIgYmctYmxhY2svNjAgdGV4dC13aGl0ZSBweC0zIHB5LTEgcm91bmRlZC1mdWxsIHRleHQteHMgcG9pbnRlci1ldmVudHMtbm9uZSI+CiAgICAgICAgICAge3QoJ2VkaXRvcl9kZXNjJyl9CiAgICAgICAgPC9kaXY+CiAgICAgIDwvZGl2PgoKICAgICAgPGRpdiBjbGFzc05hbWU9InAtNCBzcGFjZS15LTQiPgogICAgICAgIDxkaXYgY2xhc3NOYW1lPSJmbGV4IGl0ZW1zLWNlbnRlciBnYXAtNCI+CiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0iZmxleCBpdGVtcy1jZW50ZXIgZ2FwLTIgdGV4dC1ncmF5LTYwMCBtaW4tdytbNjBweF0iPgogICAgICAgICAgICA8Wm9vbUluIGNsYXNzTmFtZT0idy00IGgtNCIgLz4KICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPSJ0ZXh0LXhzIGZvbnQtYm9sZCI+e3QoJ2VkaXRvcl96b29tJyl9PC9zcGFuPgogICAgICAgICAgPC9kaXY+CiAgICAgICAgICA8aW5wdXQKICAgICAgICAgICAgdHlwZT0icmFuZ2UiCiAgICAgICAgICAgIG1pbj0iMC41IgogICAgICAgICAgICBtYXg9IjMiCiAgICAgICAgICAgIHN0ZXA9IjAuMSIKICAgICAgICAgICAgdmFsdWU9e3NjYWxlfQogICAgICAgICAgICBvbkNoYW5nZT17KGUpID0+IHNldFNjYWxlKHBhcnNlRmxvYXQoZS50YXJnZXQudmFsdWUpKX0KICAgICAgICAgICAgY2xhc3NOYW1lPSJ3LWZ1bGwgaC0yIGJnLWdyYXktMjAwIHJvdW5kZWQtbGcgYXBwZWFyYW5jZS1ub25lIGN1cnNvci1wb2ludGVyIGFjY2VudC1pbmRpZ28tNjAwIgogICAgICAgICAgLz4KICAgICAgICA8L2Rpdj4KCiAgICAgICAgPGRpdiBjbGFzc05hbWU9ImZsZXgganVzdGlmeS1iZXR3ZWVuIGdhcC00Ij4KICAgICAgICAgIDxidXR0b24KICAgICAgICAgICAgb25DbGljaz17KCkgPT4gc2V0Um90YXRpb24ociA9PiAociAtIDkwKSAlIDM2MCl9CiAgICAgICAgICAgIGNsYXNzTmFtZT0iZmxleC0xIHB5LTIgcHgtNCBiZy1ncmF5LTEwMCBob3Zlcjpici1ncmF5LTIwMCByb3VuZGVkLWxnIHRleHQtc20gZm9udC1tZWRpdW0gdGV4dC1ncmF5LTcwMCBmbGV4IGl0ZW1zLWNlbnRlciBqdXN0aWZ5LWNlbnRlciBnYXAtMiIKICAgICAgICAgID4KICAgICAgICAgICAgPFJvdGF0ZUN3IGNsYXNzTmFtZT0idy00IGgtNCIgLz4KICAgICAgICAgICAge3QoJ2VkaXRvcl9yb3RhdGUnKX0KICAgICAgICAgIDwvYnV0dG9uPgogICAgICAgICAgCiAgICAgICAgICA8YnV0dG9uCiAgICAgICAgICAgIG9uQ2xpY2s9e2hhbmRsZUNvbmZpcm19CiAgICAgICAgICAgIGNsYXNzTmFtZT0iZmxleC1bMl0gcHktMiBweC00IGJnLWluZGlnby02MDAgaG92ZXI6YmctaW5kaWdvLTcwMCB0ZXh0LXdoaXRlIHJvdW5kZWQtbGcgZm9udC1ib2xkIHNoYWRvdy1tZCBzaGFkb3ctaW5kaWdvLTIwMCBmbGV4IGl0ZW1zLWNlbnRlciBqdXN0aWZ5LWNlbnRlciBnYXAtMiIKICAgICAgICAgID4KICAgICAgICAgICAgPENoZWNrIGNsYXNzTmFtZT0idy00IGgtNCIgLz4KICAgICAgICAgICAge3QoJ2VkaXRvcl9idG5fY29uZmlybScpfQogICAgICAgICAgPC9idXR0b24+CiAgICAgICAgPC9kaXY+CiAgICAgIDwvZGl2PgogICAgPC9kaXY+CiAgKTsKfTsKCmV4cG9ydCBkZWZhdWx0IEltYWdlRWRpdG9yOw==
+import React, { useRef, useState, useEffect } from 'react';
+import { RotateCw, ZoomIn, Move, Check, X } from 'lucide-react';
+
+interface ImageEditorProps {
+  imageSrc: string;
+  onConfirm: (processedImage: string) => void;
+  onCancel: () => void;
+  t: (key: string) => string;
+}
+
+const PATTERN_SIZE = 20;
+let sharedPattern: CanvasPattern | null = null;
+
+const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onConfirm, onCancel, t }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+
+  // Load image
+  useEffect(() => {
+    const img = new Image();
+    img.src = imageSrc;
+    img.onload = () => {
+      setImage(img);
+      setPosition({ x: 0, y: 0 });
+    };
+  }, [imageSrc]);
+
+  // Draw display canvas (grid + guide circle intact — display only)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !image) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const CANVAS_SIZE = 400;
+    canvas.width = CANVAS_SIZE;
+    canvas.height = CANVAS_SIZE;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (!sharedPattern) {
+      const pCanvas = document.createElement('canvas');
+      pCanvas.width = PATTERN_SIZE * 2;
+      pCanvas.height = PATTERN_SIZE * 2;
+      const pCtx = pCanvas.getContext('2d');
+      if (pCtx) {
+        pCtx.fillStyle = '#f0f0f0';
+        pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
+        pCtx.fillStyle = '#ddd';
+        pCtx.fillRect(0, 0, PATTERN_SIZE, PATTERN_SIZE);
+        pCtx.fillRect(PATTERN_SIZE, PATTERN_SIZE, PATTERN_SIZE, PATTERN_SIZE);
+        sharedPattern = ctx.createPattern(pCanvas, 'repeat');
+      }
+    }
+
+    if (sharedPattern) {
+      ctx.fillStyle = sharedPattern;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(scale, scale);
+    ctx.translate(position.x, position.y);
+
+    const scaleFactor = Math.min(canvas.width / image.width, canvas.height / image.height) * 0.8;
+    const drawWidth = image.width * scaleFactor;
+    const drawHeight = image.height * scaleFactor;
+
+    ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+    ctx.restore();
+
+    // Guide circle (display only — not exported)
+    ctx.strokeStyle = '#4F46E5';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 5]);
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width * 0.45, 0, Math.PI * 2);
+    ctx.stroke();
+  }, [image, scale, rotation, position]);
+
+  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    setDragStart({ x: clientX - position.x, y: clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging) return;
+
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+    }
+
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
+    const dx = clientX - dragStart.x;
+    const dy = clientY - dragStart.y;
+
+    rafRef.current = requestAnimationFrame(() => {
+      const rotRad = (-rotation * Math.PI) / 180;
+      const rotatedDx = dx * Math.cos(rotRad) - dy * Math.sin(rotRad);
+      const rotatedDy = dx * Math.sin(rotRad) + dy * Math.cos(rotRad);
+      setPosition({ x: rotatedDx / scale, y: rotatedDy / scale });
+      rafRef.current = null;
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // GP55-011 fix: export via off-screen canvas — no grid, no guide circle, transparent PNG
+  const handleConfirm = () => {
+    if (!image) return;
+
+    const EXPORT_SIZE = 512;
+    const DISPLAY_SIZE = 400;
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = EXPORT_SIZE;
+    exportCanvas.height = EXPORT_SIZE;
+
+    const ctx = exportCanvas.getContext('2d');
+    if (!ctx) return;
+
+    // Scale transform from display (400px) to export (512px)
+    const exportRatio = EXPORT_SIZE / DISPLAY_SIZE;
+
+    ctx.save();
+    ctx.translate(EXPORT_SIZE / 2, EXPORT_SIZE / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(scale * exportRatio, scale * exportRatio);
+    ctx.translate(position.x, position.y);
+
+    const scaleFactor = Math.min(DISPLAY_SIZE / image.width, DISPLAY_SIZE / image.height) * 0.8;
+    const drawWidth = image.width * scaleFactor;
+    const drawHeight = image.height * scaleFactor;
+
+    ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+    ctx.restore();
+
+    onConfirm(exportCanvas.toDataURL('image/png'));
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden max-w-xl mx-auto">
+      <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+        <h3 className="font-bold text-gray-800 flex items-center gap-2">
+          <Move className="w-4 h-4 text-indigo-600" />
+          {t('editor_title')}
+        </h3>
+        <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="p-4 bg-gray-100 flex justify-center overflow-hidden touch-none relative">
+        <canvas
+          ref={canvasRef}
+          className="rounded-lg shadow-sm cursor-move bg-white"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleMouseDown}
+          onTouchMove={handleMouseMove}
+          onTouchEnd={handleMouseUp}
+        />
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-3 py-1 rounded-full text-xs pointer-events-none">
+          {t('editor_desc')}
+        </div>
+      </div>
+
+      <div className="p-4 space-y-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-gray-600 min-w-[60px]">
+            <ZoomIn className="w-4 h-4" />
+            <span className="text-xs font-bold">{t('editor_zoom')}</span>
+          </div>
+          <input
+            type="range"
+            min="0.5"
+            max="3"
+            step="0.1"
+            value={scale}
+            onChange={(e) => setScale(parseFloat(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          />
+        </div>
+
+        <div className="flex justify-between gap-4">
+          <button
+            onClick={() => setRotation(r => (r - 90) % 360)}
+            className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 flex items-center justify-center gap-2"
+          >
+            <RotateCw className="w-4 h-4" />
+            {t('editor_rotate')}
+          </button>
+
+          <button
+            onClick={handleConfirm}
+            className="flex-[2] py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md shadow-indigo-200 flex items-center justify-center gap-2"
+          >
+            <Check className="w-4 h-4" />
+            {t('editor_btn_confirm')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ImageEditor;
