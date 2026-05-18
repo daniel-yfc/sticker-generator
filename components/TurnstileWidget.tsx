@@ -65,8 +65,6 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({ onToken, onExp
         widgetIdRef.current = null;
       }
     };
-  // Callbacks are accessed via stable refs — mount logic depends only on DOM setup
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return <div ref={containerRef} className="mt-2" />;
