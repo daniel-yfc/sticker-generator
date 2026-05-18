@@ -19,7 +19,7 @@ function validateImageDimensions(dataUrl: string): Promise<void> {
         resolve();
       }
     };
-    img.onerror = () => reject(new Error('error_payload'));
+    img.onerror = () => { reject(new Error('error_payload')); };
     img.src = dataUrl;
   });
 }
@@ -45,10 +45,7 @@ export const useAppState = () => {
 
   const [history, setHistory] = useState<StickerRecord[]>([]);
 
-  // CO4-008: captcha token from TurnstileWidget
   const captchaTokenRef = useRef<string>('');
-
-  // CO4-012: stale-result guard
   const generationIdRef = useRef<number>(0);
 
   const isProcessing = status === AppStatus.PROCESSING || status === AppStatus.SET_PROCESSING;
@@ -137,7 +134,6 @@ export const useAppState = () => {
     }
   };
 
-  // DS4-10: validate image dimensions on file select
   const handleFileSelect = async (file: File) => {
     setStatus(AppStatus.UPLOADING);
     setErrorMessage(null);
@@ -166,7 +162,6 @@ export const useAppState = () => {
     setStatus(AppStatus.READY);
   };
 
-  // CO4-004: double-click guard + CO4-012: generationId stale-result guard
   const handleGenerate = async () => {
     if (isProcessing || !processedImage) return;
 
@@ -194,7 +189,7 @@ export const useAppState = () => {
 
       const img = new Image();
       img.onload = () => {
-        if (generationIdRef.current !== myId) return; // stale result
+        if (generationIdRef.current !== myId) return;
         clearTimeout(uiTimeout);
         setGeneratedImage(resultImage);
         addToHistory([{ imageUrl: resultImage, styleId: selectedStyle.id }]);
@@ -219,7 +214,6 @@ export const useAppState = () => {
     }
   };
 
-  // CO4-004: double-click guard
   const handleGenerateSet = async () => {
     if (isProcessing || !processedImage) return;
 
