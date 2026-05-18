@@ -19,6 +19,11 @@ const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000
 export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({ onToken, onExpire }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  // Stable refs so the effect never needs to re-run when callbacks change
+  const onTokenRef = useRef(onToken);
+  const onExpireRef = useRef(onExpire);
+  onTokenRef.current = onToken;
+  onExpireRef.current = onExpire;
 
   useEffect(() => {
     const scriptId = 'cf-turnstile-script';
@@ -28,9 +33,9 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({ onToken, onExp
       if (widgetIdRef.current) return;
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: SITE_KEY,
-        callback: (token: string) => { onToken(token); },
+        callback: (token: string) => { onTokenRef.current(token); },
         'expired-callback': () => {
-          if (onExpire) onExpire();
+          if (onExpireRef.current) onExpireRef.current();
         },
         theme: 'light',
         size: 'normal',
@@ -60,6 +65,7 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({ onToken, onExp
         widgetIdRef.current = null;
       }
     };
+  // Callbacks are accessed via stable refs — mount logic depends only on DOM setup
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -17,7 +17,7 @@ interface GeminiCandidate {
 
 interface GeminiErrorEnvelope {
   code: string;
-  publicKey: string;
+  publicKey?: string;  // optional: absent in legacy error shape
   retryable: boolean;
   requestId: string;
 }
@@ -44,8 +44,8 @@ function checkRateLimit(): void {
 function extractImageFromResponse(response: GeminiGenerateContentResponse): string {
   if (response.error) {
     logger.error('Gemini API Error details:', response.error);
-    // Extract publicKey from new structured error shape; fall back for legacy shape
     const errObj = response.error as GeminiErrorEnvelope;
+    // publicKey is now typed optional — ?? is valid here
     const code = errObj.publicKey ?? (response.error as { message?: string }).message ?? 'error_process';
     throw new Error(KNOWN_ERROR_KEYS.has(code) ? code : 'error_process');
   }
@@ -109,7 +109,6 @@ export const generateSticker = async (
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        // Support both new structured shape { error: { publicKey } } and legacy { error: 'string' }
         const code = errorData?.error?.publicKey ?? errorData?.error ?? 'error_process';
         throw new Error(KNOWN_ERROR_KEYS.has(code) ? code : 'error_process');
       }
