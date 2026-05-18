@@ -3,17 +3,12 @@ import http from 'http';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createApp } from '../server.cjs';
 
-// Minimal valid 1×1 PNG (hex → base64)
 const VALID_PNG_BASE64 = Buffer.from(
   '89504e470d0a1a0a0000000d49484452000000010000000108020000009001' +
   '2e00000000c4944415478016360f8cfc00000000200015e331de00000000049454e44ae426082',
   'hex'
 ).toString('base64');
 
-// ---------------------------------------------------------------------------
-// Fake Gemini server helper
-// Starts a local HTTP server; each test pushes response specs into `queue`.
-// ---------------------------------------------------------------------------
 function createFakeGemini() {
   const queue = [];
   const server = http.createServer((req, res) => {
@@ -26,15 +21,9 @@ function createFakeGemini() {
   return {
     queue,
     server,
-    start() {
-      return new Promise(r => server.listen(0, '127.0.0.1', r));
-    },
-    port() {
-      return server.address().port;
-    },
-    stop() {
-      return new Promise(r => server.close(r));
-    },
+    start() { return new Promise(r => server.listen(0, '127.0.0.1', r)); },
+    port() { return server.address().port; },
+    stop() { return new Promise(r => server.close(r)); },
   };
 }
 
@@ -77,7 +66,6 @@ describe('Wave 4 - Gemini call hardening', () => {
     fakeGemini = createFakeGemini();
     await fakeGemini.start();
 
-    // Point server.cjs at our fake Gemini over plain HTTP
     process.env.GEMINI_API_PROTOCOL = 'http';
     process.env.GEMINI_API_HOST     = '127.0.0.1';
     process.env.GEMINI_API_PORT     = String(fakeGemini.port());
@@ -101,25 +89,22 @@ describe('Wave 4 - Gemini call hardening', () => {
   });
 
   beforeEach(() => {
-    fakeGemini.queue.length = 0; // clear leftover specs
+    fakeGemini.queue.length = 0;
   });
 
-  // -------------------------------------------------------------------------
-  // GP55-013A — upstream status mapping
-  // -------------------------------------------------------------------------
   describe('GP55-013A - upstream status mapping', () => {
     it('AC-401: Gemini 401 -> client 401 error_auth', async () => {
       fakeGemini.queue.push({ status: 401, body: '{}' });
       const res = await post(appPort, makeBody());
       expect(res.status).toBe(401);
-      expect(JSON.parse(res.body).error).toBe('error_auth');
+      expect(JSON.parse(res.body).error.code).toBe('error_auth');
     });
 
     it('AC-429: Gemini 429 -> client 429 error_quota (no retry)', async () => {
       fakeGemini.queue.push({ status: 429, body: '{}' });
       const res = await post(appPort, makeBody());
       expect(res.status).toBe(429);
-      expect(JSON.parse(res.body).error).toBe('error_quota');
+      expect(JSON.parse(res.body).error.code).toBe('error_quota');
     });
 
     it('AC-503: Gemini 503 x3 -> client 502 error_upstream (retries exhausted)', async () => {
@@ -128,25 +113,19 @@ describe('Wave 4 - Gemini call hardening', () => {
       fakeGemini.queue.push({ status: 503, body: '{}' });
       const res = await post(appPort, makeBody());
       expect(res.status).toBe(502);
-      expect(JSON.parse(res.body).error).toBe('error_upstream');
+      expect(JSON.parse(res.body).error.code).toBe('error_upstream');
     });
   });
 
-  // -------------------------------------------------------------------------
-  // DS4-23 — non-JSON upstream response
-  // -------------------------------------------------------------------------
   describe('DS4-23 - non-JSON upstream response', () => {
     it('AC-nonjson: HTML upstream -> 502 error_upstream', async () => {
       fakeGemini.queue.push({ status: 200, contentType: 'text/html', body: '<html>Bad Gateway</html>' });
       const res = await post(appPort, makeBody());
       expect(res.status).toBe(502);
-      expect(JSON.parse(res.body).error).toBe('error_upstream');
+      expect(JSON.parse(res.body).error.code).toBe('error_upstream');
     });
   });
 
-  // -------------------------------------------------------------------------
-  // GP55-008A — safety block + happy path
-  // -------------------------------------------------------------------------
   describe('GP55-008A - safety block handling', () => {
     it('AC-safety: promptFeedback.blockReason -> 200 error_safety', async () => {
       fakeGemini.queue.push({
@@ -154,7 +133,7 @@ describe('Wave 4 - Gemini call hardening', () => {
       });
       const res = await post(appPort, makeBody());
       expect(res.status).toBe(200);
-      expect(JSON.parse(res.body).error).toBe('error_safety');
+      expect(JSON.parse(res.body).error.code).toBe('error_safety');
     });
 
     it('AC-success: valid generation passes through', async () => {
@@ -170,9 +149,6 @@ describe('Wave 4 - Gemini call hardening', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // CO4-011 — retry on 5xx
-  // -------------------------------------------------------------------------
   describe('CO4-011 - retry on 5xx', () => {
     it('AC-retry-success: 5xx then 200 -> success on retry', async () => {
       const success = JSON.stringify({
@@ -191,7 +167,7 @@ describe('Wave 4 - Gemini call hardening', () => {
       fakeGemini.queue.push({ status: 503, body: '{}' });
       const res = await post(appPort, makeBody());
       expect(res.status).toBe(502);
-      expect(JSON.parse(res.body).error).toBe('error_upstream');
+      expect(JSON.parse(res.body).error.code).toBe('error_upstream');
     });
   });
 });

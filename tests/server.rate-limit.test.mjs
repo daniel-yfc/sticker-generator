@@ -72,6 +72,6 @@ describe('GP55-002 - per-IP rate limiting', () => {
     const res = await post(port, VALID_BODY);
     expect(res.status).toBe(429);
     const body = JSON.parse(res.body);
-    expect(body.error).toBe('error_rate_limit');
+    expect(body.error.code).toBe('error_rate_limit');
   });
 });

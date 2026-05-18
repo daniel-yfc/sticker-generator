@@ -217,16 +217,21 @@ function checkRateLimit(ip) {
 
 // ---------------------------------------------------------------------------
 // CO4-008 + CO4-002: Turnstile CAPTCHA verification
-// Token TTL: verified tokens are cached for 5 minutes to allow set generation
-// (4 variations share one token). Replay outside TTL is rejected.
+// Token TTL: verified tokens are cached for CAPTCHA_TOKEN_TTL_MS to allow set
+// generation (4 variations share one token). Replay outside TTL is rejected.
+// CAPTCHA_TOKEN_TTL_MS env var overrides default (300000ms = 5 min).
 // ---------------------------------------------------------------------------
-const CAPTCHA_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes
+function getCaptchaTokenTtl() {
+  return parseInt(process.env.CAPTCHA_TOKEN_TTL_MS || '300000', 10);
+}
+
 const verifiedCaptchaTokens = new Map(); // token -> verifiedAt (ms)
 
 function pruneExpiredTokens() {
+  const ttl = getCaptchaTokenTtl();
   const now = Date.now();
   for (const [token, verifiedAt] of verifiedCaptchaTokens) {
-    if (now - verifiedAt > CAPTCHA_TOKEN_TTL_MS) verifiedCaptchaTokens.delete(token);
+    if (now - verifiedAt > ttl) verifiedCaptchaTokens.delete(token);
   }
 }
 
@@ -242,7 +247,7 @@ async function verifyCaptcha(token) {
   // Within TTL: reuse previous verification (allows set generation with same token)
   const existing = verifiedCaptchaTokens.get(token);
   if (existing !== undefined) {
-    if (Date.now() - existing <= CAPTCHA_TOKEN_TTL_MS) return true;
+    if (Date.now() - existing <= getCaptchaTokenTtl()) return true;
     verifiedCaptchaTokens.delete(token);
   }
 
