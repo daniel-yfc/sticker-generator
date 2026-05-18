@@ -8,16 +8,11 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
 
 const require = createRequire(import.meta.url);
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const {
   buildPrompt,
-  STYLE_PROMPTS,
-  VARIATION_FRAGMENTS,
   VALID_STYLE_IDS,
   VALID_VARIATION_IDS,
 } = require('./promptBuilder.cjs');
