@@ -2,7 +2,7 @@ import { logger } from "../utils/logger";
 import { stickerGenerationLimiter } from "../utils/rateLimit";
 import { VariationId } from "../utils/promptBuilder";
 
-const API_TIMEOUT_MS = 60000;
+const API_TIMEOUT_MS = 75000;
 const BATCH_CONCURRENCY = 2;
 
 interface GeminiResponsePart {
@@ -15,9 +15,16 @@ interface GeminiCandidate {
   finishReason?: string;
 }
 
+interface GeminiErrorEnvelope {
+  code: string;
+  publicKey?: string;  // optional: absent in legacy error shape
+  retryable: boolean;
+  requestId: string;
+}
+
 interface GeminiGenerateContentResponse {
   candidates?: GeminiCandidate[];
-  error?: { message: string; code: number; status: string };
+  error?: GeminiErrorEnvelope | { message: string; code: number; status: string };
 }
 
 const withTimeout = <T>(promise: Promise<T>, ms: number, message: string): Promise<T> =>
@@ -37,8 +44,10 @@ function checkRateLimit(): void {
 function extractImageFromResponse(response: GeminiGenerateContentResponse): string {
   if (response.error) {
     logger.error('Gemini API Error details:', response.error);
-    // Never expose raw upstream error — use known code only (CO4-013 pre-req)
-    throw new Error('error_process');
+    const errObj = response.error as GeminiErrorEnvelope;
+    // publicKey is now typed optional — ?? is valid here
+    const code = errObj.publicKey ?? (response.error as { message?: string }).message ?? 'error_process';
+    throw new Error(KNOWN_ERROR_KEYS.has(code) ? code : 'error_process');
   }
 
   if (!response.candidates || response.candidates.length === 0) {
@@ -66,7 +75,8 @@ function extractImageFromResponse(response: GeminiGenerateContentResponse): stri
 
 const KNOWN_ERROR_KEYS = new Set([
   'error_safety', 'error_quota', 'error_timeout', 'error_upstream',
-  'error_no_image', 'error_auth', 'error_payload', 'error_process'
+  'error_no_image', 'error_auth', 'error_payload', 'error_process',
+  'error_captcha', 'error_rate_limit',
 ]);
 
 function handleGeminiError(error: unknown): never {
@@ -77,12 +87,13 @@ function handleGeminiError(error: unknown): never {
 
 /**
  * GP55-001: New proxy contract.
- * Sends only {imageBase64, styleId, variationId} — backend builds prompt and contents.
+ * Sends {imageBase64, styleId, variationId, captchaToken} — backend builds prompt.
  */
 export const generateSticker = async (
   imageBase64: string,
   styleId: string,
-  variationId: VariationId = 'default'
+  variationId: VariationId = 'default',
+  captchaToken: string
 ): Promise<string> => {
   checkRateLimit();
 
@@ -93,12 +104,13 @@ export const generateSticker = async (
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64, styleId, variationId })
+        body: JSON.stringify({ imageBase64, styleId, variationId, captchaToken })
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'error_process');
+        const code = errorData?.error?.publicKey ?? errorData?.error ?? 'error_process';
+        throw new Error(KNOWN_ERROR_KEYS.has(code) ? code : 'error_process');
       }
 
       return response.json();
@@ -139,13 +151,19 @@ const throttledMap = async <T, R>(
 };
 
 /**
- * CO4-009: variations param is now VariationId[] instead of string[].
+ * CO4-009: variations param is VariationId[].
+ * captchaToken shared across all variations (5-min TTL on server).
  */
 export const generateStickerSet = async (
   sourceImageBase64: string,
   styleId: string,
-  variations: VariationId[]
+  variations: VariationId[],
+  captchaToken: string
 ): Promise<string[]> => {
   logger.info(`Generating sticker set with ${variations.length} variations`);
-  return throttledMap(variations, (v) => generateSticker(sourceImageBase64, styleId, v), BATCH_CONCURRENCY);
+  return throttledMap(
+    variations,
+    (v) => generateSticker(sourceImageBase64, styleId, v, captchaToken),
+    BATCH_CONCURRENCY
+  );
 };

@@ -2,6 +2,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // ---------------------------------------------------------------------------
 // Environment loader
@@ -115,18 +116,7 @@ function buildPrompt(styleId, variationId) {
   const style = STYLE_PROMPTS[styleId];
   const variationFragment = VARIATION_FRAGMENTS[variationId] || VARIATION_FRAGMENTS.default;
   const styleDescription = `${style.base}, depicting a ${style.person}`;
-  return `Generate a high-quality die-cut sticker of the person in the provided image.
-
-ART STYLE: ${styleDescription}.
-
-CRITICAL INSTRUCTIONS:
-1. TRANSFORM the subject into a stylistic illustration matching the Art Style.
-2. DO NOT produce a realistic photo. The result must look like a drawing, painting, or 3D render.
-3. SIMPLIFY details to match the sticker aesthetic.
-4. Add a thick, clean WHITE BORDER surrounding the subject (die-cut style).
-5. Use a solid white background.
-
-${variationFragment}`;
+  return `Generate a high-quality die-cut sticker of the person in the provided image.\n\nART STYLE: ${styleDescription}.\n\nCRITICAL INSTRUCTIONS:\n1. TRANSFORM the subject into a stylistic illustration matching the Art Style.\n2. DO NOT produce a realistic photo. The result must look like a drawing, painting, or 3D render.\n3. SIMPLIFY details to match the sticker aesthetic.\n4. Add a thick, clean WHITE BORDER surrounding the subject (die-cut style).\n5. Use a solid white background.\n\n${variationFragment}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -226,9 +216,24 @@ function checkRateLimit(ip) {
 }
 
 // ---------------------------------------------------------------------------
-// CO4-008 + CO4-002: Turnstile CAPTCHA verification + replay guard
+// CO4-008 + CO4-002: Turnstile CAPTCHA verification
+// Token TTL: verified tokens are cached for CAPTCHA_TOKEN_TTL_MS to allow set
+// generation (4 variations share one token). Replay outside TTL is rejected.
+// CAPTCHA_TOKEN_TTL_MS env var overrides default (300000ms = 5 min).
 // ---------------------------------------------------------------------------
-const usedCaptchaTokens = new Set();
+function getCaptchaTokenTtl() {
+  return parseInt(process.env.CAPTCHA_TOKEN_TTL_MS || '300000', 10);
+}
+
+const verifiedCaptchaTokens = new Map(); // token -> verifiedAt (ms)
+
+function pruneExpiredTokens() {
+  const ttl = getCaptchaTokenTtl();
+  const now = Date.now();
+  for (const [token, verifiedAt] of verifiedCaptchaTokens) {
+    if (now - verifiedAt > ttl) verifiedCaptchaTokens.delete(token);
+  }
+}
 
 async function verifyCaptcha(token) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
@@ -236,7 +241,15 @@ async function verifyCaptcha(token) {
     console.warn('TURNSTILE_SECRET_KEY not set; skipping CAPTCHA verification.');
     return true;
   }
-  if (usedCaptchaTokens.has(token)) return false;
+
+  pruneExpiredTokens();
+
+  // Within TTL: reuse previous verification (allows set generation with same token)
+  const existing = verifiedCaptchaTokens.get(token);
+  if (existing !== undefined) {
+    if (Date.now() - existing <= getCaptchaTokenTtl()) return true;
+    verifiedCaptchaTokens.delete(token);
+  }
 
   const body = new URLSearchParams({ secret, response: token });
   return new Promise((resolve) => {
@@ -257,14 +270,33 @@ async function verifyCaptcha(token) {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          if (json.success) { usedCaptchaTokens.add(token); resolve(true); }
-          else resolve(false);
+          if (json.success) {
+            verifiedCaptchaTokens.set(token, Date.now());
+            resolve(true);
+          } else {
+            resolve(false);
+          }
         } catch { resolve(false); }
       });
     });
     req.on('error', () => resolve(false));
     req.write(postData);
     req.end();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Wave 5: Structured error response helper
+// All error paths use { error: { code, publicKey, retryable, requestId } }
+// ---------------------------------------------------------------------------
+function errorBody(code, retryable = false) {
+  return JSON.stringify({
+    error: {
+      code,
+      publicKey: code,
+      retryable,
+      requestId: crypto.randomUUID(),
+    }
   });
 }
 
@@ -290,9 +322,7 @@ function mapUpstreamStatus(statusCode) {
 }
 
 // ---------------------------------------------------------------------------
-// Gemini upstream config — injectable for testing via env vars
-// Production: GEMINI_API_PROTOCOL=https  GEMINI_API_HOST=generativelanguage.googleapis.com  GEMINI_API_PORT=443
-// Test:       GEMINI_API_PROTOCOL=http   GEMINI_API_HOST=127.0.0.1                          GEMINI_API_PORT=<fake>
+// Gemini upstream config
 // ---------------------------------------------------------------------------
 function getGeminiTransport() {
   const protocol = process.env.GEMINI_API_PROTOCOL || 'https';
@@ -311,7 +341,6 @@ function getGeminiOptions(payloadLength) {
     headers: {
       'Content-Type': 'application/json',
       'Content-Length': payloadLength,
-      // omit API key when hitting local test server
       ...(protocol === 'https' ? { 'x-goog-api-key': API_KEY } : {}),
     },
   };
@@ -319,8 +348,6 @@ function getGeminiOptions(payloadLength) {
 
 // ---------------------------------------------------------------------------
 // CO4-011 + GP55-014 + DS4-23 + GP55-008A: Gemini call with retry
-// Timeout debt: 20s × 3 + ~600ms backoff ≈ 61s total.
-// Wave 5 must raise client withTimeout->75s, UI timeout->85s.
 // ---------------------------------------------------------------------------
 const GEMINI_TIMEOUT_MS = 20_000;
 const MAX_RETRIES = 2;
@@ -344,36 +371,33 @@ function attemptGeminiCall(googlePayload, clientReq) {
       clearTimeout(timer);
       clientReq.removeListener('close', onClientClose);
 
-      // DS4-23: validate Content-Type before reading body
       const ct = googleRes.headers['content-type'] || '';
       if (!ct.includes('application/json')) {
         googleRes.resume();
         return resolve({
           ok: false, retryable: false, clientStatus: 502,
-          body: JSON.stringify({ error: 'error_upstream', detail: 'non-JSON response from upstream' }),
+          body: errorBody('error_upstream'),
         });
       }
 
       let data = '';
       googleRes.on('data', c => { data += c; });
       googleRes.on('end', () => {
-        // GP55-013A: map non-200 upstream status
         const mapped = mapUpstreamStatus(googleRes.statusCode);
         if (mapped) {
           return resolve({
             ok: false, retryable: mapped.retryable,
             clientStatus: mapped.clientStatus,
-            body: JSON.stringify({ error: mapped.code }),
+            body: errorBody(mapped.code, mapped.retryable),
           });
         }
 
-        // 200: GP55-008A — check promptFeedback.blockReason
         try {
           const parsed = JSON.parse(data);
           if (parsed.promptFeedback && parsed.promptFeedback.blockReason) {
             return resolve({
               ok: false, retryable: false, clientStatus: 200,
-              body: JSON.stringify({ error: 'error_safety', detail: parsed.promptFeedback.blockReason }),
+              body: errorBody('error_safety'),
             });
           }
         } catch { /* non-parseable 200 — pass through */ }
@@ -413,16 +437,16 @@ async function callGeminiWithRetry(googlePayload, clientReq) {
           ok: false,
           retryable: attempt < MAX_RETRIES,
           clientStatus: 504,
-          body: JSON.stringify({ error: 'error_timeout' }),
+          body: errorBody('error_timeout', attempt < MAX_RETRIES),
         };
         if (!lastResult.retryable) return lastResult;
       } else {
-        return { ok: false, retryable: false, clientStatus: 500, body: JSON.stringify({ error: 'error_process' }) };
+        return { ok: false, retryable: false, clientStatus: 500, body: errorBody('error_process') };
       }
     }
   }
 
-  return lastResult || { ok: false, retryable: false, clientStatus: 502, body: JSON.stringify({ error: 'error_upstream' }) };
+  return lastResult || { ok: false, retryable: false, clientStatus: 502, body: errorBody('error_upstream') };
 }
 
 // ---------------------------------------------------------------------------
@@ -449,7 +473,7 @@ function createApp() {
       const contentType = req.headers['content-type'] || '';
       if (!contentType.includes('application/json')) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'error_payload', detail: 'Content-Type must be application/json.' }));
+        res.end(errorBody('error_payload'));
         return;
       }
 
@@ -457,7 +481,7 @@ function createApp() {
       if (!checkRateLimit(clientIp)) {
         const { windowMs } = getRateLimitConfig();
         res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(Math.ceil(windowMs / 1000)) });
-        res.end(JSON.stringify({ error: 'error_rate_limit', detail: 'Too many requests.' }));
+        res.end(errorBody('error_rate_limit'));
         return;
       }
 
@@ -471,7 +495,7 @@ function createApp() {
         if (bodyBytes > MAX_BODY_BYTES) {
           bodyTooLarge = true;
           res.writeHead(413, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'error_payload', detail: 'Request body too large.' }));
+          res.end(errorBody('error_payload'));
           req.destroy();
           return;
         }
@@ -486,38 +510,38 @@ function createApp() {
 
           if (!captchaToken || typeof captchaToken !== 'string' || captchaToken.trim() === '') {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'error_captcha', detail: 'Missing or empty captchaToken.' }));
+            res.end(errorBody('error_captcha'));
             return;
           }
 
           const captchaValid = await verifyCaptcha(captchaToken.trim());
           if (!captchaValid) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'error_captcha', detail: 'CAPTCHA verification failed.' }));
+            res.end(errorBody('error_captcha'));
             return;
           }
 
           if (!generationEnabled()) {
             res.writeHead(503, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'error_process', detail: 'Generation is currently disabled.' }));
+            res.end(errorBody('error_process'));
             return;
           }
 
           if (!checkAndIncrementDailyQuota()) {
             res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '3600' });
-            res.end(JSON.stringify({ error: 'error_quota', detail: 'Daily generation limit reached.' }));
+            res.end(errorBody('error_quota'));
             return;
           }
 
           if (!imageBase64 || typeof imageBase64 !== 'string') {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'error_payload', detail: 'Missing imageBase64.' }));
+            res.end(errorBody('error_payload'));
             return;
           }
 
           if (!styleId || !VALID_STYLE_IDS.has(styleId)) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'error_payload', detail: `Unknown styleId: ${styleId}` }));
+            res.end(errorBody('error_payload'));
             return;
           }
 
@@ -532,7 +556,7 @@ function createApp() {
             validatedMimeType = result.mimeType;
           } catch (validationError) {
             res.writeHead(validationError.status || 400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: validationError.code || 'error_payload', detail: validationError.detail }));
+            res.end(errorBody(validationError.code || 'error_payload'));
             return;
           }
 
@@ -557,8 +581,8 @@ function createApp() {
         } catch (e) {
           console.error('Error parsing request body:', e);
           if (!res.headersSent) {
-            res.writeHead(400);
-            res.end(JSON.stringify({ error: 'error_payload', detail: 'Invalid JSON.' }));
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(errorBody('error_payload'));
           }
         }
       });

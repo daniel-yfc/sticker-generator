@@ -50,32 +50,53 @@ describe('CO4-008 + CO4-002 - CAPTCHA server verification + replay protection', 
 
   afterAll(async () => {
     await new Promise(r => server.close(r));
+    delete process.env.CAPTCHA_TOKEN_TTL_MS;
   });
 
   it('AC2a - missing captchaToken -> 400', async () => {
     const res = await post(port, makeBody(undefined));
     expect(res.status).toBe(400);
-    expect(JSON.parse(res.body).error).toBe('error_captcha');
+    expect(JSON.parse(res.body).error.code).toBe('error_captcha');
   });
 
   it('AC2b - empty captchaToken -> 400', async () => {
     const res = await post(port, makeBody(''));
     expect(res.status).toBe(400);
-    expect(JSON.parse(res.body).error).toBe('error_captcha');
+    expect(JSON.parse(res.body).error.code).toBe('error_captcha');
   });
 
   it('AC2c - invalid token (always-fail secret) -> 403', async () => {
     const res = await post(port, makeBody('invalid-token-xyz'));
     expect(res.status).toBe(403);
-    expect(JSON.parse(res.body).error).toBe('error_captcha');
+    expect(JSON.parse(res.body).error.code).toBe('error_captcha');
   });
 
-  it('AC2d - replayed token -> 403 on second use (CO4-002)', async () => {
+  // CO4-002: replay protection — same token reused within TTL window is ALLOWED
+  // (enables set generation: 4 variations share one token).
+  // Reuse beyond TTL forces re-verification; with always-fail secret that means 403.
+  it('AC2d - same token within TTL window is reused (set generation, CO4-002)', async () => {
+    // Switch to always-pass secret for this sub-test
     process.env.TURNSTILE_SECRET_KEY = '1x0000000000000000000000000000000AA';
-    const token = 'replay-test-token-' + Date.now();
-    await post(port, makeBody(token));
-    const res = await post(port, makeBody(token));
-    expect(res.status).toBe(403);
-    expect(JSON.parse(res.body).error).toBe('error_captcha');
+    process.env.CAPTCHA_TOKEN_TTL_MS = '60000'; // 60s TTL
+    const token = 'reuse-test-token-' + Date.now();
+
+    const first = await post(port, makeBody(token));
+    // First call: goes to Cloudflare always-pass, server responds 503 (GENERATION_ENABLED=false)
+    expect(first.status).toBe(503);
+
+    // Second call within TTL: served from cache, same 503
+    const second = await post(port, makeBody(token));
+    expect(second.status).toBe(503);
+
+    // Third call with TTL=0: cache expires immediately, re-verification hits always-pass again -> 503
+    process.env.CAPTCHA_TOKEN_TTL_MS = '0';
+    const third = await post(port, makeBody(token));
+    expect(third.status).toBe(503);
+
+    // Fourth call: switch to always-fail secret; TTL=0 so no cache -> 403
+    process.env.TURNSTILE_SECRET_KEY = '2x0000000000000000000000000000000AA';
+    const fourth = await post(port, makeBody(token));
+    expect(fourth.status).toBe(403);
+    expect(JSON.parse(fourth.body).error.code).toBe('error_captcha');
   });
 });
