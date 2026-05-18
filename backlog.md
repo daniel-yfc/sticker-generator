@@ -1,5 +1,5 @@
 # Backlog of 'Sticker-Generator"
-**Date: 2026-05-12**
+**Date: 2026-05-19**
 
 ## Severity Definitions
 | Severity | Definition |
@@ -122,6 +122,11 @@ This list is the authoritative backlog output of the five-round CO4 / DS4 / GP55
 
 **Why first**: Every later PR needs CI to gate it and a deploy target to validate it. Secret rotation must precede any public exposure of the proxy.
 
+### Status: Fixed with PR#98
+GP55-005: .env / .env.* 加入 .gitignore；ship .env.example template
+CO4-014: 新增 .github/workflows/ci.yml（npm ci → typecheck → lint → test → build）
+CO4-020: 多階段 Dockerfile + .dockerignore
+
 ---
 
 ### Wave 1 — Stop the Bleeding (PR-1)
@@ -142,6 +147,12 @@ This list is the authoritative backlog output of the five-round CO4 / DS4 / GP55
 
 **Why before Wave 2**: These are one-file patches that immediately reduce attack surface. They are independent of the contract redesign and de-risk the longer Wave 2 PR.
 
+### Status: Fixed with PR#99
+GP55-004: API key 從 URL ?key= 移到 x-goog-api-key header
+GP55-003: Request body cap 15MB；413 on overflow；修 bodyTooLarge race condition
+CO4-003: Wildcard CORS 改為 FRONTEND_ORIGIN allowlist
+GP55-007: GENERATION_ENABLED kill-switch + in-memory daily quota counter；修 getUTCMonth() off-by-one
+
 ---
 
 ### Wave 2 — Proxy Contract Redesign (PR-2)
@@ -157,6 +168,12 @@ This list is the authoritative backlog output of the five-round CO4 / DS4 / GP55
 **New contract**: `POST /api/generate` accepts only `{ imageBase64: string, styleId: StyleId, variationId: VariationId }`. Backend constructs the Gemini payload, enforces model allow-list (`gemini-2.5-flash-image`), validates image (MIME sniff, dimension check, ≤10 MB decoded), and looks up prompt fragments from a server-owned table.
 
 **Exit criteria**: Posting `{ model: 'gemini-2.5-pro' }` is ignored. Posting `variationId: 'arbitrary-string'` returns 400. Existing happy-path E2E still passes.
+
+### Status: Fixed with PR#100 & PR#102
+GP55-001: Backend 只接受 {imageBase64, styleId, variationId}；prompt 改由 server 組裝；model allowlist 強制
+GP55-006: Server 驗證 image magic bytes (PNG/JPEG/WebP)、decoded size ≤10MB、dimensions ≤4096px
+CO4-009: VariationId 從 free string 改為 strict union type
+GP55-009: Prompt fragments + style table 移到 server.cjs，client 不再組裝 prompt
 
 ---
 
@@ -176,6 +193,12 @@ This list is the authoritative backlog output of the five-round CO4 / DS4 / GP55
 - Independent host = GP55-015 stays **High** (was conditional). Recommend lightweight Turnstile/hCaptcha rather than full auth; revisit if abuse observed.
 - CO4-002 fallback: module-level `Map` limiter when `localStorage` throws; silent `logger.warn`.
 
+### Status: Fixed with PR#101 & PR#103
+GP55-002: Per-IP rate limiting（in-memory Map，env-configurable window/limit）
+CO4-008: Turnstile CAPTCHA server-side verification（verifyCaptcha()）+ CO4-002 replay guard（usedCaptchaTokens Set）
+GP55-015: Security headers（CORS allowlist enforcement on OPTIONS）
+測試基礎建設：server.rate-limit.test.mjs、server.captcha.test.mjs、server.header.test.mjs
+
 ---
 
 ### Wave 4 — Gemini Call Hardening (PR-4)
@@ -192,6 +215,13 @@ This list is the authoritative backlog output of the five-round CO4 / DS4 / GP55
 **Retry budget**: 2 retries on 5xx and selected 429 only; jittered backoff 200ms + 400ms. Total upstream budget ≤55s to leave headroom under the 60s API timeout. **Each retry counts against the per-IP quota** (Wave 3 limiter wraps the whole call, not each attempt — confirm in implementation).
 
 **Client timeout reconciliation**: Current UI 70s is too tight if backend uses full 55s + retry budget. Raise UI timeout to ≥125s or shorten backend total budget to ≤50s. Pick one in PR-4 and document.
+
+### Status: Fixed, with PR#104
+GP55-008A: safetySettings 注入每次 Gemini request；promptFeedback.blockReason → error_safety
+GP55-013A: Upstream 401/429/5xx 映射為 structured error codes
+DS4-23: Content-Type 驗證在讀 upstream body 之前
+GP55-014: AbortController 20s timeout per attempt；client close 中斷 upstream
+CO4-011: callGeminiWithRetry() 最多 2 retries on 5xx，jittered backoff 200+400ms；7 tests via injectable fake HTTP server
 
 ---
 
@@ -215,6 +245,16 @@ type AppErrorResponse = {
 Frontend renders only `t(error.publicKey)`. `KNOWN_ERROR_KEYS` enumerates: `error_safety`, `error_quota`, `error_timeout`, `error_upstream`, `error_no_image`, `error_auth`, `error_payload`, `error_process` (fallback).
 
 **Stale-generation guard**: `AbortController` + monotonic `generationId` ref. Resolved promises whose id ≠ current are discarded.
+
+### Status: PR#108 is submitted
+| 檔案 | 改動 |
+|---|---|
+| `server.cjs` | `usedCaptchaTokens Set` → `Map` 5-min TTL；全部 error 路徑改 `{ error: { code, publicKey, retryable, requestId } }` |
+| `services/geminiService.ts` | `API_TIMEOUT_MS` 60s→75s；`captchaToken` 參數；讀新 `error.publicKey` shape |
+| `hooks/useAppState.ts` | UI timeout 70s→85s；`captchaTokenRef`；`generationIdRef` 防 stale；double-click guard；`validateImageDimensions` |
+| `components/TurnstileWidget.tsx` | 新建，載入 CF Turnstile script，callback → `onToken` |
+| `App.tsx` | 引入 `TurnstileWidget`，傳 `captchaTokenRef`，按鈕加 `disabled` |
+| `.env.example` | 加 `TURNSTILE_SECRET_KEY` + `VITE_TURNSTILE_SITE_KEY` |
 
 ---
 
