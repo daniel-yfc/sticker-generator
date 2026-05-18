@@ -20,14 +20,25 @@ export enum AppStatus {
   READY = 'ready',
   UPLOADING = 'uploading',
   PROCESSING = 'processing',
-  SET_PROCESSING = 'set_processing', // New: Processing a batch set
+  SET_PROCESSING = 'set_processing',
+  SET_PARTIAL = 'set_partial',       // Some tiles done, rest still pending/failed
   SUCCESS = 'success',
-  SET_SUCCESS = 'set_success',       // New: Displaying a batch set
+  SET_SUCCESS = 'set_success',
   ERROR = 'error',
 }
 
 export type Language = 'zh-TW' | 'en' | 'ja';
 export type ViewMode = 'create' | 'gallery' | 'history';
+
+export type StickerTileStatus = 'pending' | 'done' | 'failed';
+
+export interface StickerSetTile {
+  variationId: string;
+  status: StickerTileStatus;
+  imageUrl?: string;
+  errorPublicKey?: string;
+  retryable: boolean;
+}
 
 export interface GalleryItem {
   id: string;
@@ -82,6 +93,10 @@ export interface TranslationContent {
   btn_retry: string;
   set_title: string;
   set_desc: string;
+  sticker_tile_failed: string;
+  btn_retry_variation: string;
+  sticker_partial_success: string;
+  sticker_generating_variation: string;
   error_header: string;
   error_upload: string;
   error_process: string;
