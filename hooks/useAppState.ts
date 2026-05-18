@@ -7,6 +7,22 @@ import { generateSticker, generateStickerSet } from '../services/geminiService';
 import { VariationId } from '../utils/promptBuilder';
 
 const HISTORY_KEY = 'sticker_maker_history_v2';
+const MAX_IMAGE_DIMENSION = 4096;
+
+function validateImageDimensions(dataUrl: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      if (img.width > MAX_IMAGE_DIMENSION || img.height > MAX_IMAGE_DIMENSION) {
+        reject(new Error('error_payload'));
+      } else {
+        resolve();
+      }
+    };
+    img.onerror = () => reject(new Error('error_payload'));
+    img.src = dataUrl;
+  });
+}
 
 export const useAppState = () => {
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
@@ -28,6 +44,12 @@ export const useAppState = () => {
   const [language, setLanguage] = useState<Language>('zh-TW');
 
   const [history, setHistory] = useState<StickerRecord[]>([]);
+
+  // CO4-008: captcha token from TurnstileWidget
+  const captchaTokenRef = useRef<string>('');
+
+  // CO4-012: stale-result guard
+  const generationIdRef = useRef<number>(0);
 
   const isProcessing = status === AppStatus.PROCESSING || status === AppStatus.SET_PROCESSING;
 
@@ -77,7 +99,6 @@ export const useAppState = () => {
     setHistory(prev => {
       const index = prev.findIndex(item => item.id === id);
       if (index === -1) return prev;
-
       const next = [...prev];
       next.splice(index, 1);
       return next;
@@ -116,14 +137,21 @@ export const useAppState = () => {
     }
   };
 
+  // DS4-10: validate image dimensions on file select
   const handleFileSelect = async (file: File) => {
     setStatus(AppStatus.UPLOADING);
     setErrorMessage(null);
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       if (typeof reader.result === 'string') {
-        setRawImage(reader.result);
-        setStatus(AppStatus.EDITING);
+        try {
+          await validateImageDimensions(reader.result);
+          setRawImage(reader.result);
+          setStatus(AppStatus.EDITING);
+        } catch {
+          setErrorMessage(t('error_payload'));
+          setStatus(AppStatus.ERROR);
+        }
       }
     };
     reader.onerror = () => {
@@ -138,34 +166,45 @@ export const useAppState = () => {
     setStatus(AppStatus.READY);
   };
 
+  // CO4-004: double-click guard + CO4-012: generationId stale-result guard
   const handleGenerate = async () => {
-    if (!processedImage) return;
+    if (isProcessing || !processedImage) return;
 
+    const token = captchaTokenRef.current;
+    if (!token) {
+      setErrorMessage(t('error_captcha'));
+      setStatus(AppStatus.ERROR);
+      return;
+    }
+
+    const myId = ++generationIdRef.current;
     setStatus(AppStatus.PROCESSING);
     setErrorMessage(null);
     setGeneratedImage(null);
 
     const uiTimeout = setTimeout(() => {
       if (statusRef.current === AppStatus.PROCESSING) {
-        setErrorMessage(t("error_timeout"));
+        setErrorMessage(t('error_timeout'));
         setStatus(AppStatus.ERROR);
       }
-    }, 70000);
+    }, 85000);
 
     try {
-      const resultImage = await generateSticker(processedImage, selectedStyle.style);
+      const resultImage = await generateSticker(processedImage, selectedStyle.style, 'default', token);
 
       const img = new Image();
       img.onload = () => {
-          clearTimeout(uiTimeout);
-          setGeneratedImage(resultImage);
-          addToHistory([{ imageUrl: resultImage, styleId: selectedStyle.id }]);
-          setStatus(AppStatus.SUCCESS);
+        if (generationIdRef.current !== myId) return; // stale result
+        clearTimeout(uiTimeout);
+        setGeneratedImage(resultImage);
+        addToHistory([{ imageUrl: resultImage, styleId: selectedStyle.id }]);
+        setStatus(AppStatus.SUCCESS);
       };
       img.onerror = () => {
-          clearTimeout(uiTimeout);
-          setErrorMessage(t('error_process'));
-          setStatus(AppStatus.ERROR);
+        if (generationIdRef.current !== myId) return;
+        clearTimeout(uiTimeout);
+        setErrorMessage(t('error_process'));
+        setStatus(AppStatus.ERROR);
       };
       img.src = resultImage;
 
@@ -180,8 +219,16 @@ export const useAppState = () => {
     }
   };
 
+  // CO4-004: double-click guard
   const handleGenerateSet = async () => {
-    if (!processedImage) return;
+    if (isProcessing || !processedImage) return;
+
+    const token = captchaTokenRef.current;
+    if (!token) {
+      setErrorMessage(t('error_captcha'));
+      setStatus(AppStatus.ERROR);
+      return;
+    }
 
     setStatus(AppStatus.SET_PROCESSING);
     setErrorMessage(null);
@@ -190,7 +237,7 @@ export const useAppState = () => {
     const variations: VariationId[] = ['thumbs_up', 'laughing', 'surprised', 'cool'];
 
     try {
-      const results = await generateStickerSet(processedImage, selectedStyle.style, variations);
+      const results = await generateStickerSet(processedImage, selectedStyle.style, variations, token);
       addToHistory(results.map(imgUrl => ({ imageUrl: imgUrl, styleId: selectedStyle.id })));
       setGeneratedSet(results);
       setStatus(AppStatus.SET_SUCCESS);
@@ -238,6 +285,7 @@ export const useAppState = () => {
     history, setHistory,
     isProcessing,
     t,
+    captchaTokenRef,
     addToHistory,
     deleteFromHistory,
     handleStyleSelect,
