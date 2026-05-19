@@ -10,7 +10,7 @@ interface StickerSetViewProps {
   onReset: () => void;
   onRetryTile: (variationId: VariationId) => void;
   t: (key: string) => string;
-  stylesTranslation: Record<number, { name: string; features: string }>;
+  stylesTranslation: Partial<Record<number, { name: string; features: string }>>;
 }
 
 function StickerSetView({
@@ -21,8 +21,7 @@ function StickerSetView({
   t,
   stylesTranslation,
 }: StickerSetViewProps): React.ReactElement {
-  const styleEntry = stylesTranslation[style.id];
-  const styleName = styleEntry ? styleEntry.name : String(style.id);
+  const styleName = stylesTranslation[style.id]?.name ?? style.style;
   const doneTiles = tiles.filter(tile => tile.status === 'done');
   const hasPartialFailure = tiles.some(tile => tile.status === 'failed');
   const allPending = tiles.every(tile => tile.status === 'pending');
@@ -123,7 +122,7 @@ function StickerSetView({
                     </span>
                     {tile.retryable && (
                       <button
-                        onClick={() => onRetryTile(tile.variationId as VariationId)}
+                        onClick={() => { onRetryTile(tile.variationId as VariationId); }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-medium transition-colors"
                       >
                         <RotateCcw className="w-3 h-3" />

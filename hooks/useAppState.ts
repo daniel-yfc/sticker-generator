@@ -215,8 +215,8 @@ export const useAppState = () => {
     }
   };
 
-  // Lifted out of handleGenerateSet to satisfy non-serializable-expression lint rule.
-  // Returns a per-call handler that closes over myId and styleId.
+  // Returns a per-call handler closing over myId and styleId.
+  // Defined as useCallback to satisfy non-serializable-expression lint rule.
   const makeTileSettledHandler = useCallback(
     (myId: number, styleId: number) =>
       (settledTile: StickerSetTile) => {
@@ -266,12 +266,13 @@ export const useAppState = () => {
     setErrorMessage(null);
     setGeneratedSet([]);
 
+    const onTileSettled = makeTileSettledHandler(myId, selectedStyle.id);
     await generateStickerSet(
       processedImage,
       selectedStyle.style,
       variations,
       token,
-      makeTileSettledHandler(myId, selectedStyle.id)
+      onTileSettled
     );
   };
 
