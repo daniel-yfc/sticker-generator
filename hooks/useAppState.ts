@@ -215,6 +215,34 @@ export const useAppState = () => {
     }
   };
 
+  // Lifted out of handleGenerateSet to satisfy non-serializable-expression lint rule.
+  // Returns a per-call handler that closes over myId and styleId.
+  const makeTileSettledHandler = useCallback(
+    (myId: number, styleId: number) =>
+      (settledTile: StickerSetTile) => {
+        if (generationIdRef.current !== myId) return;
+
+        setGeneratedTiles(prev => {
+          const next = prev.map(entry =>
+            entry.variationId === settledTile.variationId ? settledTile : entry
+          );
+
+          const allDone = next.every(entry => entry.status !== 'pending');
+          if (allDone) {
+            const hasFailure = next.some(entry => entry.status === 'failed');
+            const successUrls = next
+              .filter(entry => entry.status === 'done' && entry.imageUrl)
+              .map(entry => ({ imageUrl: entry.imageUrl as string, styleId }));
+            if (successUrls.length > 0) addToHistory(successUrls);
+            setStatus(hasFailure ? AppStatus.SET_PARTIAL : AppStatus.SET_SUCCESS);
+          }
+
+          return next;
+        });
+      },
+    [addToHistory]
+  );
+
   const handleGenerateSet = async () => {
     if (isProcessing || !processedImage) return;
 
@@ -243,30 +271,7 @@ export const useAppState = () => {
       selectedStyle.style,
       variations,
       token,
-      (settledTile) => {
-        if (generationIdRef.current !== myId) return;
-
-        setGeneratedTiles(prev => {
-          // L279: renamed loop var from `t` to `entry` to avoid shadowing the `t()` translator
-          const next = prev.map(entry =>
-            entry.variationId === settledTile.variationId ? settledTile : entry
-          );
-
-          const allDone = next.every(entry => entry.status !== 'pending');
-          if (allDone) {
-            const hasFailure = next.some(entry => entry.status === 'failed');
-            // L262: filter already guarantees imageUrl is defined; no ! needed
-            const successUrls = next
-              .filter(entry => entry.status === 'done' && entry.imageUrl)
-              .map(entry => ({ imageUrl: entry.imageUrl as string, styleId: selectedStyle.id }));
-            if (successUrls.length > 0) addToHistory(successUrls);
-
-            setStatus(hasFailure ? AppStatus.SET_PARTIAL : AppStatus.SET_SUCCESS);
-          }
-
-          return next;
-        });
-      }
+      makeTileSettledHandler(myId, selectedStyle.id)
     );
   };
 

@@ -13,15 +13,14 @@ interface StickerSetViewProps {
   stylesTranslation: Record<number, { name: string; features: string }>;
 }
 
-const StickerSetView: React.FC<StickerSetViewProps> = ({
+function StickerSetView({
   tiles,
   style,
   onReset,
   onRetryTile,
   t,
   stylesTranslation,
-}) => {
-  // L17: optional chaining already safe; assign to const to avoid repeated access
+}: StickerSetViewProps): React.ReactElement {
   const styleEntry = stylesTranslation[style.id];
   const styleName = styleEntry ? styleEntry.name : String(style.id);
   const doneTiles = tiles.filter(tile => tile.status === 'done');
@@ -30,7 +29,6 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({
 
   const handleDownloadAll = () => {
     doneTiles.forEach((tile, index) => {
-      // L34: guard already ensures imageUrl is defined; no ! needed
       if (tile.imageUrl) {
         const url = tile.imageUrl;
         setTimeout(() => {
@@ -83,7 +81,6 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {tiles.map((tile) => (
               <div key={tile.variationId} className="group relative">
-                {/* Pending tile */}
                 {tile.status === 'pending' && (
                   <div className="aspect-square bg-gray-100 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center gap-2">
                     <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
@@ -91,7 +88,6 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({
                   </div>
                 )}
 
-                {/* Done tile */}
                 {tile.status === 'done' && tile.imageUrl && (
                   <>
                     <div className="aspect-square bg-gray-100 transparent-grid rounded-xl overflow-hidden border border-gray-200 shadow-sm p-4 hover:border-indigo-200 transition-colors">
@@ -104,7 +100,6 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({
                     <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-full shadow-sm">
                       <Check className="w-4 h-4 text-green-600" />
                     </div>
-                    {/* L105: add braces, capture url to avoid closure-over-mutable + remove ! */}
                     <button
                       onClick={() => {
                         const url = tile.imageUrl;
@@ -120,7 +115,6 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({
                   </>
                 )}
 
-                {/* Failed tile */}
                 {tile.status === 'failed' && (
                   <div className="aspect-square bg-red-50 rounded-xl border border-red-200 shadow-sm flex flex-col items-center justify-center gap-3 p-4">
                     <AlertTriangle className="w-8 h-8 text-red-400" />
@@ -145,6 +139,6 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({
       </div>
     </div>
   );
-};
+}
 
 export default StickerSetView;
