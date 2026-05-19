@@ -215,34 +215,6 @@ export const useAppState = () => {
     }
   };
 
-  // Returns a per-call handler closing over myId and styleId.
-  // Defined as useCallback to satisfy non-serializable-expression lint rule.
-  const makeTileSettledHandler = useCallback(
-    (myId: number, styleId: number) =>
-      (settledTile: StickerSetTile) => {
-        if (generationIdRef.current !== myId) return;
-
-        setGeneratedTiles(prev => {
-          const next = prev.map(entry =>
-            entry.variationId === settledTile.variationId ? settledTile : entry
-          );
-
-          const allDone = next.every(entry => entry.status !== 'pending');
-          if (allDone) {
-            const hasFailure = next.some(entry => entry.status === 'failed');
-            const successUrls = next
-              .filter(entry => entry.status === 'done' && entry.imageUrl)
-              .map(entry => ({ imageUrl: entry.imageUrl as string, styleId }));
-            if (successUrls.length > 0) addToHistory(successUrls);
-            setStatus(hasFailure ? AppStatus.SET_PARTIAL : AppStatus.SET_SUCCESS);
-          }
-
-          return next;
-        });
-      },
-    [addToHistory]
-  );
-
   const handleGenerateSet = async () => {
     if (isProcessing || !processedImage) return;
 
@@ -254,6 +226,7 @@ export const useAppState = () => {
     }
 
     const myId = ++generationIdRef.current;
+    const styleId = selectedStyle.id;
     const variations: VariationId[] = ['thumbs_up', 'laughing', 'surprised', 'cool'];
 
     const initialTiles: StickerSetTile[] = variations.map(v => ({
@@ -266,7 +239,25 @@ export const useAppState = () => {
     setErrorMessage(null);
     setGeneratedSet([]);
 
-    const onTileSettled = makeTileSettledHandler(myId, selectedStyle.id);
+    function onTileSettled(settledTile: StickerSetTile) {
+      if (generationIdRef.current !== myId) return;
+      setGeneratedTiles(prev => {
+        const next = prev.map(entry =>
+          entry.variationId === settledTile.variationId ? settledTile : entry
+        );
+        const allDone = next.every(entry => entry.status !== 'pending');
+        if (allDone) {
+          const hasFailure = next.some(entry => entry.status === 'failed');
+          const successUrls = next
+            .filter(entry => entry.status === 'done' && entry.imageUrl)
+            .map(entry => ({ imageUrl: entry.imageUrl as string, styleId }));
+          if (successUrls.length > 0) addToHistory(successUrls);
+          setStatus(hasFailure ? AppStatus.SET_PARTIAL : AppStatus.SET_SUCCESS);
+        }
+        return next;
+      });
+    }
+
     await generateStickerSet(
       processedImage,
       selectedStyle.style,
