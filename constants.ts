@@ -1,4 +1,3 @@
-
 import { StyleOption, GalleryItem, Language, TranslationContent } from './types';
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -181,8 +180,8 @@ export const TRANSLATIONS: Record<Language, TranslationContent> = {
       "步驟 3/4: 應用風格與向量化轉換...",
       "步驟 4/4: 最終驗證與裁切...",
     ],
-    processing_set: "正在製作擴展套裝貼圖 (一組 3 張)...",
-    result_verified: "驗證通過：512x512px PNG",
+    processing_set: "正在製作擴展套裝貼圖 (一組 4 張)...",
+    result_verified: "貼圖已完成",
     result_title: "您的貼圖已完成！",
     result_style_label: "風格",
     result_saved: "已儲存至您的貼圖集",
@@ -253,8 +252,8 @@ export const TRANSLATIONS: Record<Language, TranslationContent> = {
       "Step 3/4: Applying style & vectorizing...",
       "Step 4/4: Final validation & cropping...",
     ],
-    processing_set: "Generating expanded sticker set (3 variations)...",
-    result_verified: "Verified: 512x512px PNG",
+    processing_set: "Generating expanded sticker set (4 variations)...",
+    result_verified: "Sticker ready",
     result_title: "Sticker Ready!",
     result_style_label: "Style",
     result_saved: "Saved to Collection",
@@ -325,8 +324,8 @@ export const TRANSLATIONS: Record<Language, TranslationContent> = {
       "ステップ 3/4: スタイル適用中...",
       "ステップ 4/4: 最終確認中...",
     ],
-    processing_set: "拡張ステッカーセットを生成中 (3種類のバリエーション)...",
-    result_verified: "検証済み：512x512px PNG",
+    processing_set: "拡張ステッカーセットを生成中 (4種類のバリエーション)...",
+    result_verified: "ステッカー完成",
     result_title: "ステッカー完成！",
     result_style_label: "スタイル",
     result_saved: "コレクションに保存しました",
