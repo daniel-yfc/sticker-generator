@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generateSticker, generateStickerSet } from './geminiService';
 import { STYLES } from '../constants';
 import { VariationId } from '../utils/promptBuilder';
+import { StickerSetTile } from '../types';
 import { stickerGenerationLimiter } from '../utils/rateLimit';
 
 const originalFetch = global.fetch;
@@ -110,51 +111,64 @@ describe('geminiService', () => {
   });
 
   describe('generateStickerSet', () => {
-    it('generates multiple stickers', async () => {
-       const mockResponse = {
+    it('calls onTileSettled with done for each successful variation', async () => {
+      const mockResponse = {
         ok: true,
         json: async () => ({
           candidates: [
             {
               finishReason: 'STOP',
               content: {
-                parts: [
-                  {
-                    inlineData: {
-                      data: 'batch-img-data',
-                    },
-                  },
-                ],
+                parts: [{ inlineData: { data: 'batch-img-data' } }],
               },
             },
           ],
-        })
+        }),
       };
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       const variations: VariationId[] = ['thumbs_up', 'laughing'];
       const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
-      const results = await generateStickerSet(validBase64, STYLES[0].style, variations, FAKE_TOKEN);
+      const settled: StickerSetTile[] = [];
 
-      expect(results).toHaveLength(2);
+      await generateStickerSet(validBase64, STYLES[0].style, variations, FAKE_TOKEN, (tile) => {
+        settled.push(tile);
+      });
+
       expect(global.fetch).toHaveBeenCalledTimes(2);
-      expect(results).toEqual(['data:image/png;base64,batch-img-data', 'data:image/png;base64,batch-img-data']);
+      expect(settled).toHaveLength(2);
+      expect(settled.every(t => t.status === 'done')).toBe(true);
+      expect(settled.map(t => t.imageUrl)).toEqual([
+        'data:image/png;base64,batch-img-data',
+        'data:image/png;base64,batch-img-data',
+      ]);
     });
 
-    it('rejects if any sticker generation fails', async () => {
+    it('calls onTileSettled with failed for a failing variation without discarding successful ones', async () => {
       (global.fetch as any)
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
-            candidates: [{ finishReason: 'STOP', content: { parts: [{ inlineData: { data: 'batch-img-data' } }] } }]
-          })
+            candidates: [{ finishReason: 'STOP', content: { parts: [{ inlineData: { data: 'good-img' } }] } }],
+          }),
         })
-        .mockRejectedValueOnce(new Error('API Error'));
+        .mockRejectedValueOnce(new Error('error_process'));
 
       const variations: VariationId[] = ['thumbs_up', 'laughing'];
       const validBase64 = 'data:image/png;base64,' + 'A'.repeat(100);
+      const settled: StickerSetTile[] = [];
 
-      await expect(generateStickerSet(validBase64, STYLES[0].style, variations, FAKE_TOKEN)).rejects.toThrow('API Error');
+      await generateStickerSet(validBase64, STYLES[0].style, variations, FAKE_TOKEN, (tile) => {
+        settled.push(tile);
+      });
+
+      expect(settled).toHaveLength(2);
+      const done = settled.filter(t => t.status === 'done');
+      const failed = settled.filter(t => t.status === 'failed');
+      expect(done).toHaveLength(1);
+      expect(done[0].imageUrl).toBe('data:image/png;base64,good-img');
+      expect(failed).toHaveLength(1);
+      expect(failed[0].retryable).toBe(true);
     });
   });
 

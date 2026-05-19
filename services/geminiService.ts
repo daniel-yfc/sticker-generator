@@ -1,6 +1,7 @@
 import { logger } from "../utils/logger";
 import { stickerGenerationLimiter } from "../utils/rateLimit";
 import { VariationId } from "../utils/promptBuilder";
+import { StickerSetTile } from "../types";
 
 const API_TIMEOUT_MS = 75000;
 const BATCH_CONCURRENCY = 2;
@@ -128,42 +129,44 @@ export const generateSticker = async (
   }
 };
 
-const throttledMap = async <T, R>(
-  items: T[],
-  fn: (item: T) => Promise<R>,
-  concurrencyLimit: number = BATCH_CONCURRENCY
-): Promise<R[]> => {
-  const results: Promise<R>[] = [];
-  const executing = new Set<Promise<void>>();
-
-  for (const item of items) {
-    const p = Promise.resolve().then(() => fn(item));
-    results.push(p);
-
-    if (concurrencyLimit <= items.length) {
-      const e: Promise<void> = p.then(() => { executing.delete(e); }).catch(() => { executing.delete(e); });
-      executing.add(e);
-      if (executing.size >= concurrencyLimit) await Promise.race(executing);
-    }
-  }
-
-  return Promise.all(results);
-};
-
 /**
- * CO4-009: variations param is VariationId[].
- * captchaToken shared across all variations (5-min TTL on server).
+ * DS4-8 / GP55-021: Progressive per-tile settled sticker set generation.
+ *
+ * Each variation settles independently. onTileSettled is called as soon as each
+ * promise resolves or rejects, so the UI can update without waiting for all tiles.
+ *
+ * CAPTCHA token is shared across all variations (5-min TTL on server).
+ * Retry of a single tile must provide a fresh token if the original has expired.
  */
 export const generateStickerSet = async (
   sourceImageBase64: string,
   styleId: string,
   variations: VariationId[],
-  captchaToken: string
-): Promise<string[]> => {
+  captchaToken: string,
+  onTileSettled: (tile: StickerSetTile) => void
+): Promise<void> => {
   logger.info(`Generating sticker set with ${variations.length} variations`);
-  return throttledMap(
-    variations,
-    (v) => generateSticker(sourceImageBase64, styleId, v, captchaToken),
-    BATCH_CONCURRENCY
-  );
+
+  const executing = new Set<Promise<void>>();
+
+  for (const variationId of variations) {
+    const p: Promise<void> = generateSticker(sourceImageBase64, styleId, variationId, captchaToken)
+      .then((imageUrl) => {
+        onTileSettled({ variationId, status: 'done', imageUrl, retryable: false });
+      })
+      .catch((error: unknown) => {
+        const errorPublicKey = error instanceof Error ? error.message : 'error_process';
+        onTileSettled({ variationId, status: 'failed', errorPublicKey, retryable: true });
+      })
+      .finally(() => { executing.delete(p); });
+
+    executing.add(p);
+
+    if (executing.size >= BATCH_CONCURRENCY) {
+      await Promise.race(executing);
+    }
+  }
+
+  // Wait for all remaining in-flight tiles
+  await Promise.allSettled(executing);
 };

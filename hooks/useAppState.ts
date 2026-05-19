@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { AppStatus, StyleOption, Language, ViewMode, StickerRecord } from '../types';
+import { AppStatus, StyleOption, Language, ViewMode, StickerRecord, StickerSetTile } from '../types';
 import { STYLES, STYLES_MAP, TRANSLATIONS } from '../constants';
 import { logger } from '../utils/logger';
 import { validateHistory } from '../utils/validation';
@@ -35,6 +35,7 @@ export const useAppState = () => {
   const [selectedStyle, setSelectedStyle] = useState<StyleOption>(STYLES[0]);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedSet, setGeneratedSet] = useState<string[]>([]);
+  const [generatedTiles, setGeneratedTiles] = useState<StickerSetTile[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [rawImage, setRawImage] = useState<string | null>(null);
@@ -224,24 +225,93 @@ export const useAppState = () => {
       return;
     }
 
+    const myId = ++generationIdRef.current;
+    const styleId = selectedStyle.id;
+    const variations: VariationId[] = ['thumbs_up', 'laughing', 'surprised', 'cool'];
+
+    const initialTiles: StickerSetTile[] = variations.map(v => ({
+      variationId: v,
+      status: 'pending',
+      retryable: false,
+    }));
+    setGeneratedTiles(initialTiles);
     setStatus(AppStatus.SET_PROCESSING);
     setErrorMessage(null);
     setGeneratedSet([]);
 
-    const variations: VariationId[] = ['thumbs_up', 'laughing', 'surprised', 'cool'];
+    function onTileSettled(settledTile: StickerSetTile) {
+      if (generationIdRef.current !== myId) return;
+      setGeneratedTiles(prev => {
+        const next = prev.map(entry =>
+          entry.variationId === settledTile.variationId ? settledTile : entry
+        );
+        const allDone = next.every(entry => entry.status !== 'pending');
+        if (allDone) {
+          const hasFailure = next.some(entry => entry.status === 'failed');
+          const successUrls = next
+            .filter(entry => entry.status === 'done' && entry.imageUrl)
+            .map(entry => ({ imageUrl: entry.imageUrl as string, styleId }));
+          if (successUrls.length > 0) addToHistory(successUrls);
+          setStatus(hasFailure ? AppStatus.SET_PARTIAL : AppStatus.SET_SUCCESS);
+        }
+        return next;
+      });
+    }
+
+    await generateStickerSet(
+      processedImage,
+      selectedStyle.style,
+      variations,
+      token,
+      onTileSettled
+    );
+  };
+
+  const retryStickerSetTile = async (variationId: VariationId) => {
+    if (!processedImage) return;
+
+    const token = captchaTokenRef.current;
+    if (!token) {
+      setErrorMessage(t('error_captcha'));
+      return;
+    }
+
+    const myId = generationIdRef.current;
+
+    setGeneratedTiles(prev =>
+      prev.map(entry =>
+        entry.variationId === variationId
+          ? { ...entry, status: 'pending', errorPublicKey: undefined }
+          : entry
+      )
+    );
 
     try {
-      const results = await generateStickerSet(processedImage, selectedStyle.style, variations, token);
-      addToHistory(results.map(imgUrl => ({ imageUrl: imgUrl, styleId: selectedStyle.id })));
-      setGeneratedSet(results);
-      setStatus(AppStatus.SET_SUCCESS);
+      const imageUrl = await generateSticker(processedImage, selectedStyle.style, variationId, token);
+
+      if (generationIdRef.current !== myId) return;
+
+      setGeneratedTiles(prev => {
+        const next = prev.map(entry =>
+          entry.variationId === variationId
+            ? { variationId, status: 'done' as const, imageUrl, retryable: false }
+            : entry
+        );
+        const hasFailure = next.some(entry => entry.status === 'failed');
+        setStatus(hasFailure ? AppStatus.SET_PARTIAL : AppStatus.SET_SUCCESS);
+        addToHistory([{ imageUrl, styleId: selectedStyle.id }]);
+        return next;
+      });
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        setErrorMessage(t(error.message));
-      } else {
-        setErrorMessage(t('error_process'));
-      }
-      setStatus(AppStatus.ERROR);
+      if (generationIdRef.current !== myId) return;
+      const errorPublicKey = error instanceof Error ? error.message : 'error_process';
+      setGeneratedTiles(prev =>
+        prev.map(entry =>
+          entry.variationId === variationId
+            ? { ...entry, status: 'failed', errorPublicKey, retryable: true }
+            : entry
+        )
+      );
     }
   };
 
@@ -249,6 +319,7 @@ export const useAppState = () => {
     setStatus(AppStatus.IDLE);
     setGeneratedImage(null);
     setGeneratedSet([]);
+    setGeneratedTiles([]);
     setErrorMessage(null);
     setRawImage(null);
     setProcessedImage(null);
@@ -258,6 +329,7 @@ export const useAppState = () => {
     setStatus(AppStatus.READY);
     setGeneratedImage(null);
     setGeneratedSet([]);
+    setGeneratedTiles([]);
     setErrorMessage(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -271,6 +343,7 @@ export const useAppState = () => {
     selectedStyle, setSelectedStyle,
     generatedImage, setGeneratedImage,
     generatedSet, setGeneratedSet,
+    generatedTiles,
     errorMessage, setErrorMessage,
     rawImage, setRawImage,
     processedImage, setProcessedImage,
@@ -288,6 +361,7 @@ export const useAppState = () => {
     handleEditConfirm,
     handleGenerate,
     handleGenerateSet,
+    retryStickerSetTile,
     handleReset,
     handleReuse,
     handleImageUpdate
