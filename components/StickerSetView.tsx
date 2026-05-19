@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Download, RefreshCcw, Check, AlertTriangle, Loader2, RotateCcw } from 'lucide-react';
 import { StyleOption, StickerSetTile } from '../types';
@@ -11,7 +10,7 @@ interface StickerSetViewProps {
   onReset: () => void;
   onRetryTile: (variationId: VariationId) => void;
   t: (key: string) => string;
-  stylesTranslation: Record<number, { name: string, features: string }>;
+  stylesTranslation: Record<number, { name: string; features: string }>;
 }
 
 const StickerSetView: React.FC<StickerSetViewProps> = ({
@@ -22,16 +21,20 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({
   t,
   stylesTranslation,
 }) => {
-  const styleName = stylesTranslation[style.id]?.name || style.id;
+  // L17: optional chaining already safe; assign to const to avoid repeated access
+  const styleEntry = stylesTranslation[style.id];
+  const styleName = styleEntry ? styleEntry.name : String(style.id);
   const doneTiles = tiles.filter(tile => tile.status === 'done');
   const hasPartialFailure = tiles.some(tile => tile.status === 'failed');
   const allPending = tiles.every(tile => tile.status === 'pending');
 
   const handleDownloadAll = () => {
     doneTiles.forEach((tile, index) => {
+      // L34: guard already ensures imageUrl is defined; no ! needed
       if (tile.imageUrl) {
+        const url = tile.imageUrl;
         setTimeout(() => {
-          downloadImage(tile.imageUrl!, `sticker-pro-set-${style.id}-${tile.variationId}-${Date.now()}.png`);
+          downloadImage(url, `sticker-pro-set-${style.id}-${tile.variationId}-${Date.now()}.png`);
         }, index * 150);
       }
     });
@@ -101,8 +104,14 @@ const StickerSetView: React.FC<StickerSetViewProps> = ({
                     <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-full shadow-sm">
                       <Check className="w-4 h-4 text-green-600" />
                     </div>
+                    {/* L105: add braces, capture url to avoid closure-over-mutable + remove ! */}
                     <button
-                      onClick={() => downloadImage(tile.imageUrl!, `sticker-variation-${tile.variationId}.png`)}
+                      onClick={() => {
+                        const url = tile.imageUrl;
+                        if (url) {
+                          downloadImage(url, `sticker-variation-${tile.variationId}.png`);
+                        }
+                      }}
                       className="absolute bottom-2 right-2 bg-indigo-600 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-indigo-700"
                       title={t('btn_download')}
                     >

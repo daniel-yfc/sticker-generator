@@ -228,7 +228,6 @@ export const useAppState = () => {
     const myId = ++generationIdRef.current;
     const variations: VariationId[] = ['thumbs_up', 'laughing', 'surprised', 'cool'];
 
-    // Initialise all tiles as pending before any async work
     const initialTiles: StickerSetTile[] = variations.map(v => ({
       variationId: v,
       status: 'pending',
@@ -244,22 +243,22 @@ export const useAppState = () => {
       selectedStyle.style,
       variations,
       token,
-      (tile) => {
-        // Guard: discard callbacks from a stale generation
+      (settledTile) => {
         if (generationIdRef.current !== myId) return;
 
         setGeneratedTiles(prev => {
-          const next = prev.map(t =>
-            t.variationId === tile.variationId ? tile : t
+          // L279: renamed loop var from `t` to `entry` to avoid shadowing the `t()` translator
+          const next = prev.map(entry =>
+            entry.variationId === settledTile.variationId ? settledTile : entry
           );
 
-          const allDone = next.every(t => t.status !== 'pending');
+          const allDone = next.every(entry => entry.status !== 'pending');
           if (allDone) {
-            const hasFailure = next.some(t => t.status === 'failed');
-            // Add successful tiles to history immediately
+            const hasFailure = next.some(entry => entry.status === 'failed');
+            // L262: filter already guarantees imageUrl is defined; no ! needed
             const successUrls = next
-              .filter(t => t.status === 'done' && t.imageUrl)
-              .map(t => ({ imageUrl: t.imageUrl!, styleId: selectedStyle.id }));
+              .filter(entry => entry.status === 'done' && entry.imageUrl)
+              .map(entry => ({ imageUrl: entry.imageUrl as string, styleId: selectedStyle.id }));
             if (successUrls.length > 0) addToHistory(successUrls);
 
             setStatus(hasFailure ? AppStatus.SET_PARTIAL : AppStatus.SET_SUCCESS);
@@ -271,11 +270,6 @@ export const useAppState = () => {
     );
   };
 
-  /**
-   * DS4-8: Retry a single failed tile.
-   * Requires a fresh CAPTCHA token — same token as the original generation is reused
-   * within the 5-min TTL window; UI must refresh token before calling if expired.
-   */
   const retryStickerSetTile = async (variationId: VariationId) => {
     if (!processedImage) return;
 
@@ -287,12 +281,11 @@ export const useAppState = () => {
 
     const myId = generationIdRef.current;
 
-    // Mark the tile as pending immediately
     setGeneratedTiles(prev =>
-      prev.map(t =>
-        t.variationId === variationId
-          ? { ...t, status: 'pending', errorPublicKey: undefined }
-          : t
+      prev.map(entry =>
+        entry.variationId === variationId
+          ? { ...entry, status: 'pending', errorPublicKey: undefined }
+          : entry
       )
     );
 
@@ -302,14 +295,13 @@ export const useAppState = () => {
       if (generationIdRef.current !== myId) return;
 
       setGeneratedTiles(prev => {
-        const next = prev.map(t =>
-          t.variationId === variationId
+        const next = prev.map(entry =>
+          entry.variationId === variationId
             ? { variationId, status: 'done' as const, imageUrl, retryable: false }
-            : t
+            : entry
         );
-        const hasFailure = next.some(t => t.status === 'failed');
+        const hasFailure = next.some(entry => entry.status === 'failed');
         setStatus(hasFailure ? AppStatus.SET_PARTIAL : AppStatus.SET_SUCCESS);
-        // Add the retried tile to history
         addToHistory([{ imageUrl, styleId: selectedStyle.id }]);
         return next;
       });
@@ -317,10 +309,10 @@ export const useAppState = () => {
       if (generationIdRef.current !== myId) return;
       const errorPublicKey = error instanceof Error ? error.message : 'error_process';
       setGeneratedTiles(prev =>
-        prev.map(t =>
-          t.variationId === variationId
-            ? { ...t, status: 'failed', errorPublicKey, retryable: true }
-            : t
+        prev.map(entry =>
+          entry.variationId === variationId
+            ? { ...entry, status: 'failed', errorPublicKey, retryable: true }
+            : entry
         )
       );
     }
