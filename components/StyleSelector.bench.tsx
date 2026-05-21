@@ -1,19 +1,19 @@
 import { bench, describe } from 'vitest';
 import { render } from '@testing-library/react';
-import React from 'react';
 import StyleSelector from './StyleSelector';
 import { STYLES } from '../constants';
 
-const mockSelect = () => {};
-const mockT = (k: string) => k;
-const mockStylesTranslation = {};
+const mockT = (key: string) => key;
+const mockStylesTranslation = Object.fromEntries(
+  STYLES.map(s => [s.id, { name: `Style ${s.id}`, features: 'features' }])
+);
 
-describe('StyleSelector performance', () => {
-  bench('render StyleSelector grid mode', () => {
+describe('StyleSelector render performance', () => {
+  bench('grid mode render', () => {
     render(
       <StyleSelector
         selectedStyle={STYLES[0]}
-        onSelect={mockSelect}
+        onSelect={() => {}}
         disabled={false}
         t={mockT}
         stylesTranslation={mockStylesTranslation}
@@ -22,11 +22,11 @@ describe('StyleSelector performance', () => {
     );
   });
 
-  bench('render StyleSelector sidebar mode', () => {
+  bench('sidebar mode render', () => {
     render(
       <StyleSelector
         selectedStyle={STYLES[0]}
-        onSelect={mockSelect}
+        onSelect={() => {}}
         disabled={false}
         t={mockT}
         stylesTranslation={mockStylesTranslation}

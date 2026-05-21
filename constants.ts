@@ -1,4 +1,3 @@
-
 import { StyleOption, GalleryItem, Language, TranslationContent } from './types';
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -398,7 +397,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   { id: '14', imageUrl: 'images/illus02.png', styleId: 5, author: 'Render_Pro' },
 ];
 
-export const STYLES_MAP: Record<number, StyleOption> = STYLES.reduce((acc, style) => {
+export const STYLES_MAP: Record<number, StyleOption | undefined> = STYLES.reduce((acc, style) => {
   acc[style.id] = style;
   return acc;
-}, {} as Record<number, StyleOption>);
+}, {} as Record<number, StyleOption | undefined>);

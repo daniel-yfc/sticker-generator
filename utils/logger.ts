@@ -1,34 +1,17 @@
-const isDev = () => {
-  try {
-
-    if (import.meta.env && import.meta.env.DEV) {
-      return true;
-    }
-  } catch (error: unknown) {
-    // ignore
-  }
-  return process.env.NODE_ENV !== 'production';
-};
-
 export const logger = {
-  error: (...args: unknown[]) => {
-    if (isDev()) {
-      console.error(...args);
+  error: (message: string, ...args: unknown[]) => {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.error(`[ERROR] ${message}`, ...args);
     }
   },
-  warn: (...args: unknown[]) => {
-    if (isDev()) {
-      console.warn(...args);
+  warn: (message: string, ...args: unknown[]) => {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.warn(`[WARN] ${message}`, ...args);
     }
   },
-  info: (...args: unknown[]) => {
-    if (isDev()) {
-      console.info(...args);
-    }
-  },
-  log: (...args: unknown[]) => {
-    if (isDev()) {
-      console.log(...args);
+  info: (message: string, ...args: unknown[]) => {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.info(`[INFO] ${message}`, ...args);
     }
   }
 };
