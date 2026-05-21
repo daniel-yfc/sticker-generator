@@ -129,8 +129,7 @@ Google Gemini API
 | `npm run build` | Build the SPA for production (`dist/`) |
 | `npm run preview` | Preview the production build locally |
 | `npm run test` | Run Vitest unit test suite |
-
-> **TypeScript:** Type checking is not part of the build. Run `npx tsc --noEmit` to validate types manually.
+| `npm run typecheck` | TypeScript type-check without emitting files |
 
 ## Docker
 
