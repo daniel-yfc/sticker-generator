@@ -1,86 +1,81 @@
+import React, { useState } from 'react';
+import { GALLERY_ITEMS, STYLES, TRANSLATIONS } from '../constants';
+import { GalleryItem } from '../types';
 
-import React, { useCallback } from 'react';
-import { GALLERY_ITEMS } from '../constants';
-import { GalleryItem, StyleTranslation } from '../types';
-import { Palette, PlayCircle, DownloadCloud } from 'lucide-react';
-
-interface GalleryProps {
-  onSelectStyle: (styleId: number, imageUrl?: string) => void;
+type GalleryProps = {
+  onStyleSelect: (styleId: number) => void;
   t: (key: string) => string;
-  stylesTranslation: Record<number, StyleTranslation>;
-}
+};
 
-const Gallery: React.FC<GalleryProps> = ({ onSelectStyle, t, stylesTranslation }) => {
-  const handleTryStyle = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    const styleId = parseInt(e.currentTarget.dataset.styleid || "0", 10);
-    if (styleId) {
-      onSelectStyle(styleId);
-    }
-  }, [onSelectStyle]);
+const Gallery: React.FC<GalleryProps> = ({ onStyleSelect, t }) => {
+  const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
+  const language = 'en';
+  const stylesTranslation = TRANSLATIONS[language].styles;
 
-  const handleImportSample = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    const styleId = parseInt(e.currentTarget.dataset.styleid || "0", 10);
-    const imageUrl = e.currentTarget.dataset.url;
-    if (styleId && imageUrl) {
-      onSelectStyle(styleId, imageUrl);
-    }
-  }, [onSelectStyle]);
+  const handleItemClick = (item: GalleryItem) => {
+    setSelectedItem(item === selectedItem ? null : item);
+  };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="text-center space-y-3 mb-12">
-        <h2 className="text-4xl font-black text-gray-900 tracking-tight">{t('gallery_title')}</h2>
-        <p className="text-gray-500 max-w-2xl mx-auto text-lg">{t('gallery_subtitle')}</p>
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-8 text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('gallery_title')}</h2>
+        <p className="text-gray-600">{t('gallery_subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-        {GALLERY_ITEMS.map((item: GalleryItem) => {
-          const styleName = stylesTranslation[item.styleId]?.name || `Style #${item.styleId}`;
-          
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {GALLERY_ITEMS.map((item) => {
+          const style = STYLES.find(s => s.id === item.styleId);
+          const styleName = style ? (stylesTranslation[style.id]?.name ?? style.style) : 'Unknown';
+          const isSelected = selectedItem?.id === item.id;
+
           return (
-            <div key={item.id} className="group relative bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 flex flex-col">
-              {/* Image Container */}
-              <div className="aspect-square w-full overflow-hidden bg-gray-50 transparent-grid relative">
-                <img 
-                  src={item.imageUrl} 
-                  alt={`Sticker by ${item.author}`}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  loading="lazy"
+            <div
+              key={item.id}
+              className={`relative rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${
+                isSelected
+                  ? 'ring-2 ring-indigo-500 ring-offset-2 shadow-lg scale-105'
+                  : 'hover:shadow-md hover:scale-102'
+              }`}
+              onClick={() => handleItemClick(item)}
+            >
+              <div className="aspect-square bg-gray-100">
+                <img
+                  src={item.imageUrl}
+                  alt={`${styleName} sticker by ${item.author}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-${style?.previewColor ?? 'gray'}-100 to-${style?.previewColor ?? 'gray'}-200"><span class="text-4xl">🎨</span></div>`;
+                    }
+                  }}
                 />
-                
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-indigo-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3 p-4">
-                  <button 
-                    onClick={handleTryStyle}
-                    data-styleid={item.styleId}
-                    className="w-full bg-white text-indigo-600 px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 shadow-xl hover:scale-105"
-                  >
-                    <PlayCircle className="w-5 h-5" />
-                    {t('gallery_btn_try')}
-                  </button>
-                  <button 
-                    onClick={handleImportSample}
-                    data-styleid={item.styleId}
-                    data-url={item.imageUrl}
-                    className="w-full bg-indigo-600 text-white px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500 shadow-xl hover:bg-indigo-700 hover:scale-105"
-                  >
-                    <DownloadCloud className="w-5 h-5" />
-                    {t('gallery_btn_import')}
-                  </button>
-                </div>
               </div>
 
-              {/* Info Area */}
-              <div className="p-5 mt-auto">
-                <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 mb-2 uppercase tracking-widest">
-                  <Palette className="w-4 h-4" />
-                  <span>{styleName}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="font-bold text-gray-800">@{item.author}</span>
-                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                </div>
+              <div className="p-2 bg-white">
+                <p className="text-xs font-semibold text-gray-800 truncate">{styleName}</p>
+                <p className="text-xs text-gray-400">@{item.author}</p>
               </div>
+
+              {isSelected && (
+                <div className="absolute inset-0 bg-indigo-500/10 flex items-end p-2">
+                  <div className="w-full flex gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStyleSelect(item.styleId);
+                      }}
+                      className="flex-1 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      {t('gallery_btn_try')}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
